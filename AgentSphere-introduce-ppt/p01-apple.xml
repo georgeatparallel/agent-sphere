@@ -1,0 +1,25 @@
+<slide>
+  <style>
+    <fill><fillColor color="rgba(255, 255, 255, 1)" /></fill>
+  </style>
+  <data>
+    <img src="Iwe5bJlJcofa9zxbG1sclieUnvf" width="150" height="150" topLeftX="690" topLeftY="195">
+      <crop leftOffset="0" rightOffset="0" topOffset="0" bottomOffset="0" />
+    </img>
+
+    <shape width="520" height="96" topLeftX="60" topLeftY="190" type="text">
+      <content textType="title" fontSize="72" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" letterSpacing="0.5" wrap="false"><p>AgentSphere</p></content>
+    </shape>
+    <shape width="520" height="40" topLeftX="62" topLeftY="300" type="text">
+      <content textType="headline" fontSize="24" fontFamily="思源黑体" color="rgba(30, 41, 59, 1)" bold="false" wrap="false"><p>AI Agent 即服务（AaaS）平台</p></content>
+    </shape>
+    <shape width="520" height="30" topLeftX="62" topLeftY="354" type="text">
+      <content fontSize="16" fontFamily="思源黑体" color="rgba(100, 116, 139, 1)" wrap="false"><p>让业务系统像用水电一样，接入 Agent 能力</p></content>
+    </shape>
+
+    <shape width="500" height="22" topLeftX="60" topLeftY="500" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(148, 163, 184, 1)" wrap="false"><p>agent-sphere · github.com/nullpointexception-i/agent-sphere</p></content>
+    </shape>
+  </data>
+  <note><content><p>开场 30 秒：我是 AgentSphere 平台的作者。它把 Agent 能力做成 AaaS（Agent as a Service），让 bole 这类业务系统用很低的成本接入智力，形成感知、规划、执行、反馈的完整闭环。今天用 10 分钟讲清楚四件事：它是什么、服务谁、怎么组成、怎么跑稳，最后讲数据怎么管。</p></content></note>
+</slide>

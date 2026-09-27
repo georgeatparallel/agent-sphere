@@ -1,0 +1,98 @@
+<slide>
+  <data>
+    <shape width="300" height="24" topLeftX="60" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" letterSpacing="1" wrap="false"><p>02 · BUSINESS</p></content>
+    </shape>
+    <shape width="60" height="24" topLeftX="872" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" textAlign="right" wrap="false"><p>03 / 13</p></content>
+    </shape>
+    <shape width="840" height="44" topLeftX="60" topLeftY="60" type="text">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>业务架构：五层能力栈，三通道开放接入</p></content>
+    </shape>
+    <line startX="60" startY="112" endX="900" endY="112"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+
+    <shape width="840" height="30" topLeftX="60" topLeftY="136" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="180" height="24" topLeftX="76" topLeftY="139" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>artifact 产物层</p></content>
+    </shape>
+    <shape width="620" height="24" topLeftX="266" topLeftY="139" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>task_artifact · 文件 / 截图 / 文档落库，时间线回填</p></content>
+    </shape>
+
+    <shape width="840" height="30" topLeftX="60" topLeftY="170" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="180" height="24" topLeftX="76" topLeftY="173" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>task 任务层</p></content>
+    </shape>
+    <shape width="620" height="24" topLeftX="266" topLeftY="173" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>DAG 分层并行编排 · delegate 子 Agent · 任务回调 URL</p></content>
+    </shape>
+
+    <shape width="840" height="30" topLeftX="60" topLeftY="204" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="180" height="24" topLeftX="76" topLeftY="207" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>agent 层</p></content>
+    </shape>
+    <shape width="620" height="24" topLeftX="266" topLeftY="207" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>instance 实例 · completions 补全 · chatbox 对话，ReAct 循环</p></content>
+    </shape>
+
+    <shape width="840" height="30" topLeftX="60" topLeftY="238" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="180" height="24" topLeftX="76" topLeftY="241" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>capability 能力层</p></content>
+    </shape>
+    <shape width="620" height="24" topLeftX="266" topLeftY="241" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>MCP · Skill · Builtin-Tool(SPI) · CLI · Chrome 桥接，ToolExecutor 统一分发</p></content>
+    </shape>
+
+    <shape width="840" height="58" topLeftX="60" topLeftY="272" type="rect">
+      <fill><fillColor color="rgba(232, 238, 248, 1)" /></fill>
+      <border color="rgba(37, 99, 235, 1)" width="1" />
+    </shape>
+    <shape width="190" height="48" topLeftX="76" topLeftY="280" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(37, 99, 235, 1)" bold="true" lineSpacing="multiple:1.3"><p>模型供应商层</p><p>ai-api</p></content>
+    </shape>
+    <shape width="616" height="22" topLeftX="276" topLeftY="280" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" wrap="false"><p>多厂商兼容：OpenAI / DeepSeek / 智谱 / 中转站 / OrcaRouter，SPI 插拔接入</p></content>
+    </shape>
+    <shape width="616" height="22" topLeftX="276" topLeftY="306" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>主路由 + fallback 链自动降级 · connect/read/stream 三重超时 · token 用量计量与操作审计</p></content>
+    </shape>
+
+    <line startX="60" startY="352" endX="900" endY="352"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+    <shape width="200" height="24" topLeftX="60" topLeftY="362" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(37, 99, 235, 1)" bold="true" letterSpacing="1" wrap="false"><p>接入三通道</p></content>
+    </shape>
+    <shape width="260" height="44" topLeftX="60" topLeftY="392" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" lineSpacing="multiple:1.4"><p>SSO + Widget</p><p>业务页内嵌对话，OIDC 免登录</p></content>
+    </shape>
+    <line startX="340" startY="392" endX="340" endY="436"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+    <shape width="260" height="44" topLeftX="360" topLeftY="392" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" lineSpacing="multiple:1.4"><p>能力开放 API</p><p>code + subject + businessType 直连</p></content>
+    </shape>
+    <line startX="640" startY="392" endX="640" endY="436"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+    <shape width="260" height="44" topLeftX="660" topLeftY="392" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" lineSpacing="multiple:1.4"><p>主站管理台</p><p>实例 / 技能 / 权限 / 审计入口</p></content>
+    </shape>
+
+    <shape width="840" height="26" topLeftX="60" topLeftY="452" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>每用户私有资源副本：实例 / 技能 / 记忆按 created_by 行级隔离，互不串扰</p></content>
+    </shape>
+
+    <line startX="60" startY="516" endX="900" endY="516"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+    <shape width="420" height="14" topLeftX="60" topLeftY="526" type="text">
+      <content fontSize="9" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" wrap="false"><p>AgentSphere · Interview Deck · 2026-09</p></content>
+    </shape>
+  </data>
+  <note><content><p>这一页讲纵向五层能力栈：从下往上是模型供应商层 ai-api、capability 能力层、agent 层、task 层，最顶层 artifact 落库。重点讲模型供应商层：OpenAI、DeepSeek、智谱、中转站、OrcaRouter 多厂商通过 SPI 插拔兼容接入；主路由失败自动走 fallback 链降级；connect、read、stream 三重超时兜底；token 用量和供应商操作全量审计。横向是三通道接入：Widget 内嵌业务页、能力开放 API 直连、主站管理台。</p></content></note>
+</slide>

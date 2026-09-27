@@ -1,0 +1,243 @@
+{
+  "ok": true,
+  "identity": "user",
+  "data": {
+    "content_saved": true,
+    "issues": {
+      "document": {
+        "errors": [],
+        "infos": [],
+        "warnings": []
+      },
+      "file": null,
+      "schema_version": "2.0",
+      "slide_size": {
+        "height": 540,
+        "width": 960
+      },
+      "slides": [
+        {
+          "element_count": 4,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 1,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 20,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 2,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 30,
+          "errors": [
+            {
+              "available_height": 41.00000000000001,
+              "code": "text_may_overflow_shape",
+              "element_ids": [
+                "bVQ"
+              ],
+              "elements": [
+                "bVQ"
+              ],
+              "estimated_height": 48,
+              "hint": "Locate via related_objects[].xml_path. Increase shape.height, reduce the text, or set content wrap=\"true\" autoFit=\"normal-auto-fit\" (autoFit shrinks the font to fit; wrap is already the default). This is an estimate based on font size, line spacing, and wrapped line count.",
+              "level": "error",
+              "line_count": 3,
+              "line_height": 18,
+              "measurement": {
+                "available_height": 41.00000000000001,
+                "estimated_height": 48,
+                "line_count": 3,
+                "line_height": 18,
+                "overflow": 6.999999999999993
+              },
+              "message": "text shape bVQ may overflow its own content box (estimated 48px, available 41px); consider setting content wrap=\"true\" autoFit=\"normal-auto-fit\"",
+              "overflow": 6.999999999999993,
+              "overflow_axis": "height",
+              "related_objects": [
+                {
+                  "bbox": {
+                    "height": 41.00000000000001,
+                    "width": 620,
+                    "x": 266,
+                    "y": 207
+                  },
+                  "element_id": "bVQ",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[3]/data/shape[12]"
+                }
+              ],
+              "rule": {
+                "comparison": "estimated_height \u003c= available_height",
+                "id": "text_may_overflow_shape",
+                "name": "estimated_text_fits_declared_shape"
+              },
+              "schema_version": "2.0",
+              "target": {
+                "slide_number": 3
+              }
+            }
+          ],
+          "infos": [],
+          "issues": [
+            {
+              "available_height": 41.00000000000001,
+              "code": "text_may_overflow_shape",
+              "element_ids": [
+                "bVQ"
+              ],
+              "elements": [
+                "bVQ"
+              ],
+              "estimated_height": 48,
+              "hint": "Locate via related_objects[].xml_path. Increase shape.height, reduce the text, or set content wrap=\"true\" autoFit=\"normal-auto-fit\" (autoFit shrinks the font to fit; wrap is already the default). This is an estimate based on font size, line spacing, and wrapped line count.",
+              "level": "error",
+              "line_count": 3,
+              "line_height": 18,
+              "measurement": {
+                "available_height": 41.00000000000001,
+                "estimated_height": 48,
+                "line_count": 3,
+                "line_height": 18,
+                "overflow": 6.999999999999993
+              },
+              "message": "text shape bVQ may overflow its own content box (estimated 48px, available 41px); consider setting content wrap=\"true\" autoFit=\"normal-auto-fit\"",
+              "overflow": 6.999999999999993,
+              "overflow_axis": "height",
+              "related_objects": [
+                {
+                  "bbox": {
+                    "height": 41.00000000000001,
+                    "width": 620,
+                    "x": 266,
+                    "y": 207
+                  },
+                  "element_id": "bVQ",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[3]/data/shape[12]"
+                }
+              ],
+              "rule": {
+                "comparison": "estimated_height \u003c= available_height",
+                "id": "text_may_overflow_shape",
+                "name": "estimated_text_fits_declared_shape"
+              },
+              "schema_version": "2.0",
+              "target": {
+                "slide_number": 3
+              }
+            }
+          ],
+          "slide_number": 3,
+          "status": "blocked",
+          "warnings": []
+        },
+        {
+          "element_count": 21,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 4,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 31,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 5,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 40,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 6,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 33,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 7,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 34,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 8,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 37,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 9,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 24,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 10,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 23,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 11,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 36,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 12,
+          "status": "passed",
+          "warnings": []
+        }
+      ],
+      "summary": {
+        "error_count": 1,
+        "info_count": 0,
+        "release_ready": false,
+        "screenshot_review_required": false,
+        "slide_count": 12,
+        "status": "blocked",
+        "warning_count": 0
+      },
+      "tool": "xml_lint"
+    },
+    "path": "/Users/elvin/Desktop/Code/agent/agent-sphere/AgentSphere-面试PPT/f9.xml",
+    "revision_id": 264,
+    "scope": "presentation",
+    "size": 104164,
+    "xml_presentation_id": "UFj2sO8Mnlv7ncdcYSScRqRznkb"
+  }
+}

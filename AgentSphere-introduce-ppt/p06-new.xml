@@ -1,0 +1,139 @@
+<slide>
+  <data>
+    <shape width="300" height="24" topLeftX="60" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" letterSpacing="1" wrap="false"><p>04 · APPLICATION</p></content>
+    </shape>
+    <shape width="60" height="24" topLeftX="872" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" textAlign="right" wrap="false"><p>06 / 13</p></content>
+    </shape>
+    <shape width="840" height="44" topLeftX="60" topLeftY="60" type="text">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>应用架构：后端多 domain 解耦，四大前端载体</p></content>
+    </shape>
+    <shape width="840" height="26" topLeftX="60" topLeftY="114" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>一个工程按 domain 拆模块，domain 间仅经 SPI 接口调用；completions 组合 model + capability 完成一次对话</p></content>
+    </shape>
+
+    <shape width="260" height="26" topLeftX="60" topLeftY="146" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(37, 99, 235, 1)" bold="true" letterSpacing="1" wrap="false"><p>01 · 后端 domain 模块</p></content>
+    </shape>
+
+    <shape width="420" height="150" topLeftX="60" topLeftY="178" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="388" height="22" topLeftX="76" topLeftY="186" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>业务 domain · 各自独立分包，可独立测试替换</p></content>
+    </shape>
+
+    <shape width="126" height="44" topLeftX="76" topLeftY="216" type="rect">
+      <fill><fillColor color="rgba(255, 255, 255, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="118" height="36" topLeftX="82" topLeftY="220" type="text">
+      <content fontSize="10.5" fontFamily="Roboto Mono" color="rgba(13, 19, 38, 1)" bold="true" lineSpacing="multiple:1.25"><p>model</p><p>路由/fallback</p></content>
+    </shape>
+    <shape width="126" height="44" topLeftX="210" topLeftY="216" type="rect">
+      <fill><fillColor color="rgba(255, 255, 255, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="118" height="36" topLeftX="216" topLeftY="220" type="text">
+      <content fontSize="10.5" fontFamily="Roboto Mono" color="rgba(13, 19, 38, 1)" bold="true" lineSpacing="multiple:1.25"><p>capability</p><p>mcp/skill/tool</p></content>
+    </shape>
+    <shape width="126" height="44" topLeftX="344" topLeftY="216" type="rect">
+      <fill><fillColor color="rgba(255, 255, 255, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="118" height="36" topLeftX="350" topLeftY="220" type="text">
+      <content fontSize="10.5" fontFamily="Roboto Mono" color="rgba(13, 19, 38, 1)" bold="true" lineSpacing="multiple:1.25"><p>instance</p><p>Agent 实例</p></content>
+    </shape>
+    <shape width="126" height="44" topLeftX="76" topLeftY="268" type="rect">
+      <fill><fillColor color="rgba(255, 255, 255, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="118" height="36" topLeftX="82" topLeftY="272" type="text">
+      <content fontSize="10.5" fontFamily="Roboto Mono" color="rgba(13, 19, 38, 1)" bold="true" lineSpacing="multiple:1.25"><p>completions</p><p>补全/对话</p></content>
+    </shape>
+    <shape width="126" height="44" topLeftX="210" topLeftY="268" type="rect">
+      <fill><fillColor color="rgba(255, 255, 255, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="118" height="36" topLeftX="216" topLeftY="272" type="text">
+      <content fontSize="10.5" fontFamily="Roboto Mono" color="rgba(13, 19, 38, 1)" bold="true" lineSpacing="multiple:1.25"><p>tasks</p><p>DAG 编排</p></content>
+    </shape>
+    <shape width="126" height="44" topLeftX="344" topLeftY="268" type="rect">
+      <fill><fillColor color="rgba(255, 255, 255, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="118" height="36" topLeftX="350" topLeftY="272" type="text">
+      <content fontSize="10.5" fontFamily="Roboto Mono" color="rgba(13, 19, 38, 1)" bold="true" lineSpacing="multiple:1.25"><p>runtime</p><p>ReAct 内核</p></content>
+    </shape>
+
+    <shape width="420" height="66" topLeftX="60" topLeftY="340" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="388" height="22" topLeftX="76" topLeftY="348" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>支撑 domain</p></content>
+    </shape>
+    <shape width="404" height="22" topLeftX="76" topLeftY="372" type="text">
+      <content fontSize="11.5" fontFamily="Roboto Mono" color="rgba(83, 97, 116, 1)" wrap="false"><p>sso 身份认证 · resource-template 资源模板 · infrastructure 基础设施</p></content>
+    </shape>
+
+    <shape width="420" height="56" topLeftX="60" topLeftY="414" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="388" height="22" topLeftX="76" topLeftY="422" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>装配与公共</p></content>
+    </shape>
+    <shape width="404" height="22" topLeftX="76" topLeftY="444" type="text">
+      <content fontSize="11.5" fontFamily="Roboto Mono" color="rgba(83, 97, 116, 1)" wrap="false"><p>bootstrap 启动装配 · admin 管理 API · common · util</p></content>
+    </shape>
+
+    <shape width="380" height="26" topLeftX="520" topLeftY="146" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(37, 99, 235, 1)" bold="true" letterSpacing="1" wrap="false"><p>02 · 前端四载体</p></content>
+    </shape>
+    <icon width="26" height="26" topLeftX="520" topLeftY="180" iconType="iconpark/Base/all-application.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="344" height="30" topLeftX="556" topLeftY="176" type="text">
+      <content fontSize="14.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>主站 · React 19 / UmiJS Max</p></content>
+    </shape>
+    <shape width="344" height="22" topLeftX="556" topLeftY="206" type="text">
+      <content fontSize="11.5" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>管理、会话、多 Agent 卡片聚合</p></content>
+    </shape>
+    <icon width="26" height="26" topLeftX="520" topLeftY="252" iconType="iconpark/Communicate/comment.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="344" height="30" topLeftX="556" topLeftY="248" type="text">
+      <content fontSize="14.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>内嵌 Widget · IIFE + shadow DOM</p></content>
+    </shape>
+    <shape width="344" height="22" topLeftX="556" topLeftY="278" type="text">
+      <content fontSize="11.5" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>嵌入业务页的对话组件，样式与宿主隔离</p></content>
+    </shape>
+    <icon width="26" height="26" topLeftX="520" topLeftY="324" iconType="iconpark/Office/box.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="344" height="30" topLeftX="556" topLeftY="320" type="text">
+      <content fontSize="14.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>Chrome MV3 扩展</p></content>
+    </shape>
+    <shape width="344" height="22" topLeftX="556" topLeftY="350" type="text">
+      <content fontSize="11.5" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>浏览器自动化桥，CDP 截图与点击</p></content>
+    </shape>
+    <icon width="26" height="26" topLeftX="520" topLeftY="396" iconType="iconpark/Base/setting.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="344" height="30" topLeftX="556" topLeftY="392" type="text">
+      <content fontSize="14.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>管理后台 · admin API</p></content>
+    </shape>
+    <shape width="344" height="22" topLeftX="556" topLeftY="422" type="text">
+      <content fontSize="11.5" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>账户、技能、实例与权限的统一管理</p></content>
+    </shape>
+
+    <line startX="60" startY="516" endX="900" endY="516"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+    <shape width="420" height="14" topLeftX="60" topLeftY="526" type="text">
+      <content fontSize="9" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" wrap="false"><p>AgentSphere · Interview Deck · 2026-09</p></content>
+    </shape>
+  </data>
+  <note><content><p>这一页讲应用怎么落地。后端是一个 Maven 工程，但按 domain 拆成十多个模块：业务 domain 六个——model 模型路由、capability 能力、instance 实例、completions 补全、tasks 任务编排、runtime ReAct 内核，彼此只通过 SPI 接口耦合，单个 domain 可以独立测试、独立替换。下面是支撑 domain：sso 身份、resource-template 资源模板、infrastructure 基础设施；再往下 bootstrap 装配、admin 管理 API、common 和 util。前端四种载体：主站 React 19、内嵌 Widget、Chrome MV3 扩展、管理后台，同一套后端 API 覆盖所有接入场景。</p></content></note>
+</slide>

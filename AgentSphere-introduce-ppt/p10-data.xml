@@ -1,0 +1,181 @@
+<slide xmlns="https://www.larkoffice.com/sml/2.0">
+  <data>
+    <shape type="text" topLeftX="60" topLeftY="28" width="300" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" letterSpacing="1">
+        <p>06 · DATA</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="872" topLeftY="28" width="60" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" textAlign="right">
+        <p>10 / 13</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="60" width="840" height="44">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>数据架构：PG + Redis，行级隔离 + 多级记忆</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="114" width="840" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>一套 PG 承载核心业务，Redis 分域缓存，租户隔离靠拦截器自动完成</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="140" width="380" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(37,99,235,1)" bold="true" wrap="false" letterSpacing="1">
+        <p>01 · 核心表（PG · Flyway V1→V70）</p>
+      </content>
+    </shape>
+    <table topLeftX="60" topLeftY="176" width="380" height="262">
+      <colgroup>
+        <col width="140"/>
+        <col width="240"/>
+      </colgroup>
+      <tr height="28">
+        <td>
+          <fill><fillColor color="rgba(13,19,38,1)"/></fill>
+          <content textType="body" fontSize="11" bold="true" color="rgba(255,255,255,1)" fontFamily="Roboto Mono" textAlign="left"><p>表</p></content>
+        </td>
+        <td>
+          <fill><fillColor color="rgba(13,19,38,1)"/></fill>
+          <content textType="body" fontSize="11" bold="true" color="rgba(255,255,255,1)" textAlign="left"><p>关键字段 / 职责</p></content>
+        </td>
+      </tr>
+      <tr height="32">
+        <td>
+          <fill><fillColor color="rgba(247,250,254,1)"/></fill>
+          <content textType="body" fontSize="11" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="left"><p>user</p></content>
+        </td>
+        <td>
+          <fill><fillColor color="rgba(247,250,254,1)"/></fill>
+          <content textType="body" fontSize="11" color="rgba(83,97,116,1)" textAlign="left"><p>用户 / 凭据</p></content>
+        </td>
+      </tr>
+      <tr height="32">
+        <td>
+          <fill><fillColor color="rgba(255,255,255,1)"/></fill>
+          <content textType="body" fontSize="11" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="left"><p>identity_provider</p></content>
+        </td>
+        <td>
+          <fill><fillColor color="rgba(255,255,255,1)"/></fill>
+          <content textType="body" fontSize="11" color="rgba(83,97,116,1)" textAlign="left"><p>SSO 身份源</p></content>
+        </td>
+      </tr>
+      <tr height="32">
+        <td>
+          <fill><fillColor color="rgba(247,250,254,1)"/></fill>
+          <content textType="body" fontSize="11" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="left"><p>capability_skill</p></content>
+        </td>
+        <td>
+          <fill><fillColor color="rgba(247,250,254,1)"/></fill>
+          <content textType="body" fontSize="11" color="rgba(83,97,116,1)" textAlign="left"><p>version / origin_version / auto_update</p></content>
+        </td>
+      </tr>
+      <tr height="32">
+        <td>
+          <fill><fillColor color="rgba(255,255,255,1)"/></fill>
+          <content textType="body" fontSize="11" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="left"><p>instance</p></content>
+        </td>
+        <td>
+          <fill><fillColor color="rgba(255,255,255,1)"/></fill>
+          <content textType="body" fontSize="11" color="rgba(83,97,116,1)" textAlign="left"><p>用户私有实例</p></content>
+        </td>
+      </tr>
+      <tr height="32">
+        <td>
+          <fill><fillColor color="rgba(247,250,254,1)"/></fill>
+          <content textType="body" fontSize="11" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="left"><p>timeline</p></content>
+        </td>
+        <td>
+          <fill><fillColor color="rgba(247,250,254,1)"/></fill>
+          <content textType="body" fontSize="11" color="rgba(83,97,116,1)" textAlign="left"><p>会话 / 消息时间线</p></content>
+        </td>
+      </tr>
+      <tr height="32">
+        <td>
+          <fill><fillColor color="rgba(255,255,255,1)"/></fill>
+          <content textType="body" fontSize="11" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="left"><p>task_artifact</p></content>
+        </td>
+        <td>
+          <fill><fillColor color="rgba(255,255,255,1)"/></fill>
+          <content textType="body" fontSize="11" color="rgba(83,97,116,1)" textAlign="left"><p>任务产物归档</p></content>
+        </td>
+      </tr>
+      <tr height="32">
+        <td>
+          <fill><fillColor color="rgba(247,250,254,1)"/></fill>
+          <content textType="body" fontSize="11" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="left"><p>audit</p></content>
+        </td>
+        <td>
+          <fill><fillColor color="rgba(247,250,254,1)"/></fill>
+          <content textType="body" fontSize="11" color="rgba(83,97,116,1)" textAlign="left"><p>审计留痕</p></content>
+        </td>
+      </tr>
+    </table>
+    <line startX="470" startY="140" endX="470" endY="490">
+      <border color="rgb(201,214,232)" width="1" dashArray="dash"/>
+    </line>
+    <shape type="text" topLeftX="500" topLeftY="140" width="300" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(37,99,235,1)" bold="true" wrap="false" letterSpacing="1">
+        <p>02 · 数据治理三件事</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Safe/protect.svg" topLeftX="500" topLeftY="182" width="28" height="28">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="544" topLeftY="178" width="356" height="28">
+      <content textType="body" fontSize="15" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>行级隔离</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="544" topLeftY="210" width="356" height="52">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.45">
+        <p>DataPermissionInterceptor 自动注入 created_by=当前用户，查询天然隔离；Skill Hub 市场显式放开。</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Charts/data-one.svg" topLeftX="500" topLeftY="292" width="28" height="28">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="544" topLeftY="288" width="356" height="28">
+      <content textType="body" fontSize="15" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>Redis 分域</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="544" topLeftY="320" width="356" height="52">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.45">
+        <p>token 缓存 / 取消集合 / 事件总线 / SSE 缓存，四类数据按域隔离，互不干扰。</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Office/doc-success.svg" topLeftX="500" topLeftY="402" width="28" height="28">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="544" topLeftY="398" width="356" height="28">
+      <content textType="body" fontSize="15" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>多级记忆</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="544" topLeftY="430" width="356" height="52">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.45">
+        <p>多级记忆落库 + 写时压缩，长会话上下文可控、可追溯。</p>
+      </content>
+    </shape>
+    <line startX="60" startY="516" endX="900" endY="516">
+      <border color="rgb(226,230,238)" width="1"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="526" width="420" height="14">
+      <content textType="caption" fontSize="9" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false">
+        <p>AgentSphere · Interview Deck · 2026-09</p>
+      </content>
+    </shape>
+  </data>
+  <note>
+    <content textType="body">
+      <p>这一页讲数据怎么管。PG 用 Flyway 从 V1 迁到 V70，核心表七张：用户、身份提供方、技能表带版本三个关键字段、用户私有实例、会话时间线、任务产物和审计。隔离靠 DataPermissionInterceptor，自动注入 created_by 等于当前用户名，技能市场显式放开。Redis 按域分开：token 缓存、取消集合、事件总线、SSE 缓存。记忆多级落库，写时压缩控制体积，长会话上下文可控可追溯。</p>
+    </content>
+  </note>
+</slide>

@@ -1,0 +1,105 @@
+<slide xmlns="https://www.larkoffice.com/sml/2.0">
+  <data>
+    <shape type="text" topLeftX="60" topLeftY="28" width="300" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" letterSpacing="1">
+        <p>06 · DEMO</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="872" topLeftY="28" width="60" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" textAlign="right">
+        <p>11 / 13</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="60" width="840" height="44">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>演示看点：三处现场演示</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="114" width="840" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>演示时依次打开主站会话、Widget 嵌入页、Skill Hub 三处界面</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="60" topLeftY="160" width="250" height="270" presetHandlers="6">
+      <fill>
+        <fillColor color="rgb(247,250,254)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <icon iconType="iconpark/Base/all-application.svg" topLeftX="84" topLeftY="186" width="32" height="32">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="84" topLeftY="232" width="210" height="28">
+      <content textType="body" fontSize="16" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>主站 · 多 Agent 对话</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="84" topLeftY="266" width="210" height="90">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.5">
+        <p>会话页多 Agent 卡片聚合，感知 → 规划 → 执行 → 反馈全程可见。</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="355" topLeftY="160" width="250" height="270" presetHandlers="6">
+      <fill>
+        <fillColor color="rgb(247,250,254)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <icon iconType="iconpark/Communicate/comment.svg" topLeftX="379" topLeftY="186" width="32" height="32">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="379" topLeftY="232" width="210" height="28">
+      <content textType="body" fontSize="16" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>Widget · 嵌入业务页</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="379" topLeftY="266" width="210" height="90">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.5">
+        <p>以 bole 页面为宿主，对话组件即插即用，SSO 免登录。</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="650" topLeftY="160" width="250" height="270" presetHandlers="6">
+      <fill>
+        <fillColor color="rgb(247,250,254)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <icon iconType="iconpark/Connect/fork.svg" topLeftX="674" topLeftY="186" width="32" height="32">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="674" topLeftY="232" width="210" height="28">
+      <content textType="body" fontSize="16" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>Skill Hub · 技能市场</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="674" topLeftY="266" width="210" height="90">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.5">
+        <p>浏览、安装、fork 技能，演示版本追踪与自动更新。</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="460" width="840" height="26">
+      <content textType="body" fontSize="12.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>本页为可选页：时间紧可直接跳过，不影响主线。</p>
+      </content>
+    </shape>
+    <line startX="60" startY="516" endX="900" endY="516">
+      <border color="rgb(226,230,238)" width="1"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="526" width="420" height="14">
+      <content textType="caption" fontSize="9" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false">
+        <p>AgentSphere · Interview Deck · 2026-09</p>
+      </content>
+    </shape>
+  </data>
+  <note>
+    <content textType="body">
+      <p>这一页是演示引导页，替代产品截图：演示时依次打开三处。主站会话页展示多 Agent 卡片聚合与四步闭环；以 bole 业务页为宿主演示 Widget 嵌入即用与 SSO 免登录；Skill Hub 演示技能安装、fork 与版本追踪。时间紧可以整页跳过，不影响主线。</p>
+    </content>
+  </note>
+</slide>

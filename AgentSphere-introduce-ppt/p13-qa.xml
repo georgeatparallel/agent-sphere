@@ -1,0 +1,88 @@
+<slide xmlns="https://www.larkoffice.com/sml/2.0">
+  <data>
+    <shape type="text" topLeftX="60" topLeftY="28" width="300" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" letterSpacing="1">
+        <p>07 · Q&amp;A</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="872" topLeftY="28" width="60" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" textAlign="right">
+        <p>13 / 13</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="60" width="840" height="44">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>Q&amp;A · 高频追问备用</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="114" width="840" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>三个最可能被追问的点，提前备好答案</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="140" width="60" height="60">
+      <content textType="body" fontSize="30" fontFamily="思源黑体" color="rgba(37,99,235,1)" bold="true" wrap="false">
+        <p>Q1</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="130" topLeftY="152" width="700" height="32">
+      <content textType="body" fontSize="17" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>多副本会不会重复执行同一任务？</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="130" topLeftY="190" width="700" height="40">
+      <content textType="body" fontSize="12.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.4">
+        <p>每个执行有唯一 owner 租约，失联即过期，孤儿清扫回收；session 级取消跨副本生效，杜绝双跑。</p>
+      </content>
+    </shape>
+    <line startX="60" startY="248" endX="900" endY="248">
+      <border color="rgb(226,230,238)" width="1"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="266" width="60" height="60">
+      <content textType="body" fontSize="30" fontFamily="思源黑体" color="rgba(37,99,235,1)" bold="true" wrap="false">
+        <p>Q2</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="130" topLeftY="278" width="700" height="32">
+      <content textType="body" fontSize="17" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>SSO 接入安全吗？</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="130" topLeftY="316" width="700" height="40">
+      <content textType="body" fontSize="12.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.4">
+        <p>OIDC 免登换取会话凭据，provider@subject 身份映射，每用户私有资源副本，互不可见。</p>
+      </content>
+    </shape>
+    <line startX="60" startY="374" endX="900" endY="374">
+      <border color="rgb(226,230,238)" width="1"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="392" width="60" height="60">
+      <content textType="body" fontSize="30" fontFamily="思源黑体" color="rgba(37,99,235,1)" bold="true" wrap="false">
+        <p>Q3</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="130" topLeftY="404" width="700" height="32">
+      <content textType="body" fontSize="17" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>租户数据如何隔离？</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="130" topLeftY="442" width="700" height="40">
+      <content textType="body" fontSize="12.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.4">
+        <p>DataPermissionInterceptor 自动注入 created_by=当前用户，行级隔离；Skill Hub 市场显式放开。</p>
+      </content>
+    </shape>
+    <line startX="60" startY="516" endX="900" endY="516">
+      <border color="rgb(226,230,238)" width="1"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="526" width="420" height="14">
+      <content textType="caption" fontSize="9" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false">
+        <p>AgentSphere · Interview Deck · 2026-09</p>
+      </content>
+    </shape>
+  </data>
+  <note>
+    <content textType="body">
+      <p>备用问答页，应对三个高频追问。第一问多副本：owner 租约唯一持有、失联过期、孤儿清扫回收，session 级取消跨副本，不会双跑。第二问 SSO 安全：OIDC 免登换会话凭据，provider@subject 映射身份，每用户私有副本互不可见。第三问租户隔离：DataPermissionInterceptor 自动注入 created_by 行级隔离，技能市场显式放开。</p>
+    </content>
+  </note>
+</slide>

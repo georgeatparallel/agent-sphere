@@ -1,0 +1,161 @@
+<slide xmlns="https://www.larkoffice.com/sml/2.0">
+  <data>
+    <shape type="text" topLeftX="60" topLeftY="28" width="300" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" letterSpacing="1">
+        <p>03 · SKILL HUB</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="872" topLeftY="28" width="60" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" textAlign="right">
+        <p>05 / 13</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="60" width="840" height="44">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>Skill Hub：AaaS 的 App Store，能力可分发、可演进</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="114" width="840" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>技能以可版本化的资产发布，业务侧 fork 安装，平台统一追踪与自动更新</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="60" topLeftY="150" width="190" height="250" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(247,250,254)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="72" topLeftY="166" width="60" height="26">
+      <content textType="body" fontSize="14" fontFamily="Roboto Mono" color="rgba(37,99,235,1)" bold="true" wrap="false">
+        <p>01</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Arrows/upload-two.svg" topLeftX="196" topLeftY="166" width="30" height="30">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="72" topLeftY="214" width="166" height="28">
+      <content textType="body" fontSize="16" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>技能可见性发布</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="72" topLeftY="252" width="166" height="120">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.5">
+        <p>作者发布技能，设置可见范围与初始版本，进入技能市场。</p>
+      </content>
+    </shape>
+    <line startX="258" startY="275" endX="268" endY="275">
+      <border color="rgb(37,99,235)" width="2"/>
+      <endArrow type="solid-triangle"/>
+    </line>
+    <shape type="rect" topLeftX="272" topLeftY="150" width="190" height="250" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(247,250,254)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="284" topLeftY="166" width="60" height="26">
+      <content textType="body" fontSize="14" fontFamily="Roboto Mono" color="rgba(37,99,235,1)" bold="true" wrap="false">
+        <p>02</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Connect/fork.svg" topLeftX="408" topLeftY="166" width="30" height="30">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="284" topLeftY="214" width="166" height="28">
+      <content textType="body" fontSize="16" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>安装即 fork</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="284" topLeftY="252" width="166" height="120">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.5">
+        <p>业务侧 fork 出专属副本，独立演进、互不影响。</p>
+      </content>
+    </shape>
+    <line startX="470" startY="275" endX="480" endY="275">
+      <border color="rgb(37,99,235)" width="2"/>
+      <endArrow type="solid-triangle"/>
+    </line>
+    <shape type="rect" topLeftX="484" topLeftY="150" width="190" height="250" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(247,250,254)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="496" topLeftY="166" width="60" height="26">
+      <content textType="body" fontSize="14" fontFamily="Roboto Mono" color="rgba(37,99,235,1)" bold="true" wrap="false">
+        <p>03</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Edit/list.svg" topLeftX="620" topLeftY="166" width="30" height="30">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="496" topLeftY="214" width="166" height="28">
+      <content textType="body" fontSize="16" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>版本追踪</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="496" topLeftY="252" width="166" height="120">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.5">
+        <p>origin_version 记录来源，可对比、可回退、可升级。</p>
+      </content>
+    </shape>
+    <line startX="682" startY="275" endX="692" endY="275">
+      <border color="rgb(37,99,235)" width="2"/>
+      <endArrow type="solid-triangle"/>
+    </line>
+    <shape type="rect" topLeftX="696" topLeftY="150" width="190" height="250" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(247,250,254)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="708" topLeftY="166" width="60" height="26">
+      <content textType="body" fontSize="14" fontFamily="Roboto Mono" color="rgba(37,99,235,1)" bold="true" wrap="false">
+        <p>04</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Arrows/play-cycle.svg" topLeftX="832" topLeftY="166" width="30" height="30">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="708" topLeftY="214" width="166" height="28">
+      <content textType="body" fontSize="15" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>自动更新定时任务</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="708" topLeftY="252" width="166" height="120">
+      <content textType="body" fontSize="12" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.5">
+        <p>周期检查上游新版本，拉取后灰度替换并验证。</p>
+      </content>
+    </shape>
+    <line startX="60" startY="432" endX="900" endY="432">
+      <border color="rgb(226,230,238)" width="1"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="448" width="840" height="52">
+      <content textType="body" fontSize="14" fontFamily="思源黑体" color="rgba(83,97,116,1)" lineSpacing="multiple:1.5">
+        <p><span bold="true">Skill Hub = 技能市场 + 安装隔离 + 版本治理</span>：让 Agent 能力像 App 一样分发与演进，业务侧永远拿到可控、可升级的能力。</p>
+      </content>
+    </shape>
+    <line startX="60" startY="516" endX="900" endY="516">
+      <border color="rgb(226,230,238)" width="1"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="526" width="420" height="14">
+      <content textType="caption" fontSize="9" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false">
+        <p>AgentSphere · Interview Deck · 2026-09</p>
+      </content>
+    </shape>
+  </data>
+  <note>
+    <content textType="body">
+      <p>这一页把 Skill Hub 讲成 AaaS 的 App Store：技能以可版本化资产发布，业务侧 fork 安装得到专属副本，平台记录来源版本号，并通过定时任务自动跟踪上游更新。这套机制让 Agent 能力像 App 一样分发、隔离和演进，也回答了一个面试高频问题：平台能力怎么治理版本。</p>
+    </content>
+  </note>
+</slide>

@@ -1,0 +1,76 @@
+<slide>
+  <data>
+    <shape width="300" height="24" topLeftX="60" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" letterSpacing="1" wrap="false"><p>01 · POSITIONING</p></content>
+    </shape>
+    <shape width="60" height="24" topLeftX="872" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" textAlign="right" wrap="false"><p>02 / 12</p></content>
+    </shape>
+    <shape width="840" height="44" topLeftX="60" topLeftY="60" type="text">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>把 Agent 能力做成 AaaS，业务系统零建模接入 AI 能力</p></content>
+    </shape>
+    <line startX="60" startY="112" endX="900" endY="112"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+
+    <shape width="320" height="28" topLeftX="60" topLeftY="136" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(37, 99, 235, 1)" bold="true" letterSpacing="1" wrap="false"><p>01 · 一句话定位</p></content>
+    </shape>
+    <shape width="320" height="96" topLeftX="60" topLeftY="172" type="text">
+      <content textType="headline" fontSize="21" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" lineSpacing="multiple:1.4"><p>把 Agent 能力做成 AaaS</p><p>业务系统零建模接入 AI 能力</p></content>
+    </shape>
+    <shape width="320" height="120" topLeftX="60" topLeftY="284" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" lineSpacing="multiple:1.55"><p>业务系统无需自建模型编排与执行链路：平台提供模型路由、运行时与生命周期管理，上层 SaaS 业务通过标准通道接入即用。</p></content>
+    </shape>
+    <shape width="320" height="28" topLeftX="60" topLeftY="428" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(37, 99, 235, 1)" bold="true" letterSpacing="1" wrap="false"><p>02 · 能力大厦</p></content>
+    </shape>
+    <shape width="320" height="52" topLeftX="60" topLeftY="464" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)"><p>IaaS 地基 → PaaS 楼体 → AaaS 核心层 → SaaS 业务入住</p></content>
+    </shape>
+
+    <!-- 屋顶 -->
+    <shape width="180" height="10" topLeftX="560" topLeftY="168" type="rect">
+      <fill><fillColor color="rgba(201, 214, 232, 1)" /></fill>
+    </shape>
+
+    <!-- SaaS 顶层 -->
+    <shape width="440" height="58" topLeftX="440" topLeftY="182" presetHandlers="0" type="rect">
+      <fill><fillColor color="rgba(232, 238, 248, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="400" height="44" topLeftX="460" topLeftY="191" type="text">
+      <content fontSize="14" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" lineSpacing="multiple:1.25"><p><strong>SaaS · bole 业务系统</strong>　被赋能方，直接消费 Agent 能力</p></content>
+    </shape>
+
+    <!-- AaaS 核心层（亮蓝） -->
+    <shape width="440" height="58" topLeftX="440" topLeftY="244" presetHandlers="0" type="rect">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </shape>
+    <shape width="400" height="44" topLeftX="460" topLeftY="253" type="text">
+      <content fontSize="14" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" lineSpacing="multiple:1.25"><p><strong>AaaS · AgentSphere</strong>　本平台（核心），输出能力与闭环</p></content>
+    </shape>
+
+    <!-- PaaS 层 -->
+    <shape width="440" height="58" topLeftX="440" topLeftY="306" presetHandlers="0" type="rect">
+      <fill><fillColor color="rgba(232, 238, 248, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="400" height="44" topLeftX="460" topLeftY="315" type="text">
+      <content fontSize="14" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" lineSpacing="multiple:1.25"><p><strong>PaaS · K8s + Rancher</strong>　编排、多副本与灰度承载</p></content>
+    </shape>
+
+    <!-- IaaS 地基（加宽） -->
+    <shape width="480" height="58" topLeftX="420" topLeftY="368" presetHandlers="0" type="rect">
+      <fill><fillColor color="rgba(210, 220, 236, 1)" /></fill>
+      <border color="rgba(180, 196, 220, 1)" width="1" />
+    </shape>
+    <shape width="440" height="44" topLeftX="440" topLeftY="377" type="text">
+      <content fontSize="14" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" lineSpacing="multiple:1.25"><p><strong>IaaS · 阿里云 ECS</strong>　计算资源与 ACR 镜像库（地基）</p></content>
+    </shape>
+
+    <line startX="60" startY="508" endX="900" endY="508"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+    <shape width="420" height="14" topLeftX="60" topLeftY="526" type="text">
+      <content fontSize="9" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" wrap="false"><p>agent-sphere · github.com/nullpointexception-i/agent-sphere</p></content>
+    </shape>
+  </data>
+  <note><content><p>这一页讲定位：AgentSphere 不是给人用的聊天工具，而是把 Agent 能力做成可交付的服务层。右侧画成能力大厦：bole 业务系统在顶层入住，AgentSphere 是亮蓝色核心层，K8s+Rancher 是楼体，阿里云 ECS 是地基。面试官能看到我对整个技术栈有完整认知。</p></content></note>
+</slide>

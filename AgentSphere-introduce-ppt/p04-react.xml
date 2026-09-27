@@ -1,0 +1,71 @@
+<slide>
+  <data>
+    <shape width="300" height="24" topLeftX="60" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" letterSpacing="1" wrap="false"><p>02 · BUSINESS LOOP</p></content>
+    </shape>
+    <shape width="60" height="24" topLeftX="872" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" textAlign="right" wrap="false"><p>04 / 12</p></content>
+    </shape>
+    <shape width="840" height="44" topLeftX="60" topLeftY="60" type="text">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>ReAct 闭环：Thought → Action → Observation 循环</p></content>
+    </shape>
+    <shape width="600" height="26" topLeftX="60" topLeftY="114" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>Reasoning + Acting：模型边思考边调工具，观察结果再推理下一步</p></content>
+    </shape>
+
+    <shape width="170" height="170" topLeftX="110" topLeftY="180" type="ellipse">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </shape>
+    <shape width="150" height="130" topLeftX="120" topLeftY="200" type="text">
+      <content fontSize="11" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" textAlign="center" lineSpacing="multiple:1.5"><p><span fontSize="15" bold="true">Thought</span></p><p>思考 · 推理</p><p><span fontSize="9.5">分析任务，规划下一步调哪个工具</span></p></content>
+    </shape>
+
+    <shape width="170" height="170" topLeftX="395" topLeftY="180" type="ellipse">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </shape>
+    <shape width="150" height="130" topLeftX="405" topLeftY="200" type="text">
+      <content fontSize="11" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" textAlign="center" lineSpacing="multiple:1.5"><p><span fontSize="15" bold="true">Action</span></p><p>行动 · 调工具</p><p><span fontSize="9.5">调用 Skill / MCP / Builtin 执行</span></p></content>
+    </shape>
+
+    <shape width="170" height="170" topLeftX="680" topLeftY="180" type="ellipse">
+      <fill><fillColor color="rgba(232, 238, 248, 1)" /></fill>
+      <border color="rgba(37, 99, 235, 1)" width="1" />
+    </shape>
+    <shape width="150" height="130" topLeftX="690" topLeftY="200" type="text">
+      <content fontSize="11" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" textAlign="center" lineSpacing="multiple:1.5"><p><span fontSize="15" bold="true">Observation</span></p><p>观察 · 结果</p><p><span fontSize="9.5">工具返回数据，喂回下一轮 Thought</span></p></content>
+    </shape>
+
+    <line startX="285" startY="265" endX="390" endY="265">
+      <border color="rgba(37, 99, 235, 1)" width="2" />
+      <endArrow type="solid-triangle" />
+    </line>
+    <line startX="570" startY="265" endX="675" endY="265">
+      <border color="rgba(37, 99, 235, 1)" width="2" />
+      <endArrow type="solid-triangle" />
+    </line>
+
+    <line startX="765" startY="355" endX="765" endY="420">
+      <border color="rgba(148, 163, 184, 1)" width="1" />
+    </line>
+    <line startX="765" startY="420" endX="195" endY="420">
+      <border color="rgba(148, 163, 184, 1)" width="1" />
+    </line>
+    <line startX="195" startY="420" endX="195" endY="355">
+      <border color="rgba(148, 163, 184, 1)" width="1" />
+      <endArrow type="solid-triangle" />
+    </line>
+    <shape width="200" height="20" topLeftX="400" topLeftY="424" type="text">
+      <content fontSize="11" fontFamily="思源黑体" color="rgba(100, 116, 139, 1)" textAlign="center" wrap="false"><p>循环迭代，直到任务完成</p></content>
+    </shape>
+
+    <shape width="840" height="26" topLeftX="60" topLeftY="460" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>bole 穿线：Thought 解析简历要点 → Action 调寻访工具 → Observation 候选人列表 → 下一轮 Thought 做匹配排序</p></content>
+    </shape>
+
+    <line startX="60" startY="508" endX="900" endY="508"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+    <shape width="420" height="14" topLeftX="60" topLeftY="526" type="text">
+      <content fontSize="9" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" wrap="false"><p>agent-sphere · github.com/nullpointexception-i/agent-sphere</p></content>
+    </shape>
+  </data>
+  <note><content><p>这一页讲 ReAct 闭环：Thought 思考推理，Action 调工具执行，Observation 观察结果再喂回 Thought，循环直到任务完成。用 bole 招聘穿线：简历解析是 Thought，寻访是 Action，候选人列表是 Observation，下一轮 Thought 做匹配。这是平台运行时的核心范式。</p></content></note>
+</slide>

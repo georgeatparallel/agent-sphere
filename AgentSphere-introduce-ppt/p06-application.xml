@@ -1,0 +1,160 @@
+<slide xmlns="https://www.larkoffice.com/sml/2.0">
+  <data>
+    <shape type="text" topLeftX="60" topLeftY="28" width="300" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" letterSpacing="1">
+        <p>04 · APPLICATION</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="872" topLeftY="28" width="60" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" textAlign="right">
+        <p>06 / 13</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="60" width="840" height="44">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>应用架构：后端 DDD 分层 + 四大前端载体</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="114" width="840" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>后端一个工程多模块，前端四种形态覆盖所有接入场景</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="140" width="260" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(37,99,235,1)" bold="true" wrap="false" letterSpacing="1">
+        <p>01 · 后端工程</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="60" topLeftY="172" width="260" height="34" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(232,238,248)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="72" topLeftY="179" width="236" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="center" wrap="false">
+        <p>controller · 接入与路由</p>
+      </content>
+    </shape>
+    <line startX="190" startY="210" endX="190" endY="222">
+      <border color="rgb(37,99,235)" width="2"/>
+      <endArrow type="solid-triangle"/>
+    </line>
+    <shape type="rect" topLeftX="60" topLeftY="226" width="260" height="34" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(232,238,248)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="72" topLeftY="233" width="236" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="center" wrap="false">
+        <p>service · 业务编排</p>
+      </content>
+    </shape>
+    <line startX="190" startY="264" endX="190" endY="276">
+      <border color="rgb(37,99,235)" width="2"/>
+      <endArrow type="solid-triangle"/>
+    </line>
+    <shape type="rect" topLeftX="60" topLeftY="280" width="260" height="34" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(232,238,248)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="72" topLeftY="287" width="236" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="center" wrap="false">
+        <p>repository · 数据访问</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="336" width="370" height="120">
+      <content textType="body" fontSize="12" fontFamily="Roboto Mono" color="rgba(83,97,116,1)" lineSpacing="multiple:1.6">
+        <p>capability · mcp / skill / cli / builtin</p>
+        <p>runtime · 执行引擎</p>
+        <p>instance · 实例生命周期</p>
+        <p>infrastructure · 基础设施</p>
+        <p>bootstrap · 启动装配</p>
+      </content>
+    </shape>
+    <line startX="470" startY="140" endX="470" endY="432">
+      <border color="rgb(201,214,232)" width="1" dashArray="dash"/>
+    </line>
+    <shape type="text" topLeftX="500" topLeftY="140" width="260" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(37,99,235,1)" bold="true" wrap="false" letterSpacing="1">
+        <p>02 · 前端四载体</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Base/all-application.svg" topLeftX="500" topLeftY="180" width="26" height="26">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="540" topLeftY="176" width="360" height="34">
+      <content textType="body" fontSize="15" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>主站 · React 19 / UmiJS Max</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="540" topLeftY="212" width="360" height="24">
+      <content textType="body" fontSize="11.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>管理、会话、多 Agent 卡片聚合</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Communicate/comment.svg" topLeftX="500" topLeftY="252" width="26" height="26">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="540" topLeftY="248" width="360" height="34">
+      <content textType="body" fontSize="15" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>内嵌 Widget · IIFE + shadow DOM</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="540" topLeftY="284" width="360" height="24">
+      <content textType="body" fontSize="11.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>嵌入业务页的对话组件，样式与宿主隔离</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Office/box.svg" topLeftX="500" topLeftY="324" width="26" height="26">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="540" topLeftY="320" width="360" height="34">
+      <content textType="body" fontSize="15" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>Chrome MV3 扩展</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="540" topLeftY="356" width="360" height="24">
+      <content textType="body" fontSize="11.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>浏览器内自动化操作桥，CDP 截图与点击</p>
+      </content>
+    </shape>
+    <icon iconType="iconpark/Base/setting.svg" topLeftX="500" topLeftY="396" width="26" height="26">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="540" topLeftY="392" width="360" height="34">
+      <content textType="body" fontSize="15" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>管理后台</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="540" topLeftY="428" width="360" height="24">
+      <content textType="body" fontSize="11.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>账户、技能、实例与权限的统一管理</p>
+      </content>
+    </shape>
+    <line startX="60" startY="516" endX="900" endY="516">
+      <border color="rgb(226,230,238)" width="1"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="526" width="420" height="14">
+      <content textType="caption" fontSize="9" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false">
+        <p>AgentSphere · Interview Deck · 2026-09</p>
+      </content>
+    </shape>
+  </data>
+  <note>
+    <content textType="body">
+      <p>这一页回答怎么组成：后端是 DDD 分层的一个工程，controller 负责接入路由，service 做业务编排，repository 管数据访问；领域模块上 capability 四域（mcp、skill、cli、builtin）是核心，runtime 是执行引擎，instance 管实例生命周期，infrastructure 与 bootstrap 兜底装配。前端有四个载体：主站、内嵌 Widget、Chrome 扩展和管理后台，覆盖从管理到嵌入到浏览器自动化的全部场景。</p>
+    </content>
+  </note>
+</slide>

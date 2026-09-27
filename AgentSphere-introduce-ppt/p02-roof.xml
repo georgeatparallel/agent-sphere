@@ -1,0 +1,105 @@
+<slide>
+  <data>
+    <shape width="300" height="24" topLeftX="60" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" letterSpacing="1" wrap="false"><p>01 · POSITIONING</p></content>
+    </shape>
+    <shape width="60" height="24" topLeftX="872" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" textAlign="right" wrap="false"><p>02 / 12</p></content>
+    </shape>
+    <shape width="300" height="44" topLeftX="60" topLeftY="60" type="text">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>定位与总体架构</p></content>
+    </shape>
+    <line startX="60" startY="112" endX="900" endY="112"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+
+    <shape width="60" height="24" topLeftX="60" topLeftY="120" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(37, 99, 235, 1)" bold="true" letterSpacing="1" wrap="false"><p>定位</p></content>
+    </shape>
+    <shape width="840" height="32" topLeftX="60" topLeftY="142" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" lineSpacing="multiple:1.4"><p>业务系统无需自建模型编排与执行链路：平台提供模型路由、运行时与生命周期管理，上层 SaaS 业务通过标准通道接入即用。</p></content>
+    </shape>
+
+    <shape width="80" height="22" topLeftX="60" topLeftY="182" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(37, 99, 235, 1)" bold="true" wrap="false"><p>总体架构</p></content>
+    </shape>
+    <shape width="400" height="22" topLeftX="140" topLeftY="182" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>agent-sphere harness 支撑体系</p></content>
+    </shape>
+
+    <shape width="360" height="40" topLeftX="300" topLeftY="214" type="triangle">
+      <fill><fillColor color="rgba(148, 163, 184, 1)" /></fill>
+    </shape>
+
+    <shape width="560" height="34" topLeftX="200" topLeftY="254" presetHandlers="4" type="rect">
+      <fill><fillColor color="rgba(219, 231, 248, 1)" /></fill>
+      <border color="rgba(180, 196, 220, 1)" width="1" />
+    </shape>
+    <shape width="520" height="22" topLeftX="220" topLeftY="259" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" textAlign="center" wrap="false"><p><strong>SaaS · bole 业务系统</strong>　被赋能方，直接消费 Agent 能力</p></content>
+    </shape>
+
+    <shape width="720" height="80" topLeftX="120" topLeftY="292" presetHandlers="4" type="rect">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </shape>
+    <shape width="680" height="20" topLeftX="140" topLeftY="298" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" bold="true" wrap="false"><p>AaaS · AgentSphere（核心）—— 输出 Agent 能力与感知→规划→执行→反馈闭环</p></content>
+    </shape>
+    <shape width="155" height="36" topLeftX="140" topLeftY="324" presetHandlers="3" type="rect">
+      <fill><fillColor color="rgba(29, 78, 216, 1)" /></fill>
+    </shape>
+    <shape width="155" height="36" topLeftX="305" topLeftY="324" presetHandlers="3" type="rect">
+      <fill><fillColor color="rgba(29, 78, 216, 1)" /></fill>
+    </shape>
+    <shape width="155" height="36" topLeftX="470" topLeftY="324" presetHandlers="3" type="rect">
+      <fill><fillColor color="rgba(29, 78, 216, 1)" /></fill>
+    </shape>
+    <shape width="155" height="36" topLeftX="635" topLeftY="324" presetHandlers="3" type="rect">
+      <fill><fillColor color="rgba(29, 78, 216, 1)" /></fill>
+    </shape>
+    <shape width="155" height="36" topLeftX="140" topLeftY="324" type="text">
+      <content fontSize="10" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" textAlign="center" lineSpacing="multiple:1.2"><p>模型路由</p><p>多供应商·fallback</p></content>
+    </shape>
+    <shape width="155" height="36" topLeftX="305" topLeftY="324" type="text">
+      <content fontSize="10" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" textAlign="center" lineSpacing="multiple:1.2"><p>运行时</p><p>虚拟线程·SSE</p></content>
+    </shape>
+    <shape width="155" height="36" topLeftX="470" topLeftY="324" type="text">
+      <content fontSize="10" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" textAlign="center" lineSpacing="multiple:1.2"><p>Skill Hub</p><p>技能市场·版本</p></content>
+    </shape>
+    <shape width="155" height="36" topLeftX="635" topLeftY="324" type="text">
+      <content fontSize="10" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" textAlign="center" lineSpacing="multiple:1.2"><p>会话记忆</p><p>多层·写时压缩</p></content>
+    </shape>
+
+    <shape width="720" height="56" topLeftX="120" topLeftY="376" presetHandlers="4" type="rect">
+      <fill><fillColor color="rgba(232, 238, 248, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <shape width="680" height="18" topLeftX="140" topLeftY="382" type="text">
+      <content fontSize="11.5" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>PaaS · K8s + Rancher —— 编排、多副本与灰度承载</p></content>
+    </shape>
+    <shape width="155" height="18" topLeftX="140" topLeftY="404" type="text">
+      <content fontSize="10" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" textAlign="center" wrap="false"><p>K8s 编排</p></content>
+    </shape>
+    <shape width="155" height="18" topLeftX="305" topLeftY="404" type="text">
+      <content fontSize="10" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" textAlign="center" wrap="false"><p>Rancher 控制台</p></content>
+    </shape>
+    <shape width="155" height="18" topLeftX="470" topLeftY="404" type="text">
+      <content fontSize="10" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" textAlign="center" wrap="false"><p>PostgreSQL</p></content>
+    </shape>
+    <shape width="155" height="18" topLeftX="635" topLeftY="404" type="text">
+      <content fontSize="10" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" textAlign="center" wrap="false"><p>Redis</p></content>
+    </shape>
+
+    <shape width="800" height="34" topLeftX="80" topLeftY="440" presetHandlers="4" type="rect">
+      <fill><fillColor color="rgba(190, 205, 228, 1)" /></fill>
+      <border color="rgba(160, 178, 206, 1)" width="1" />
+    </shape>
+    <shape width="760" height="22" topLeftX="100" topLeftY="445" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" textAlign="center" wrap="false"><p><strong>IaaS · 阿里云 ECS + ACR</strong>　计算资源与镜像仓库（地基）</p></content>
+    </shape>
+
+    <line startX="60" startY="508" endX="900" endY="508"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+    <shape width="420" height="14" topLeftX="60" topLeftY="526" type="text">
+      <content fontSize="9" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" wrap="false"><p>agent-sphere · github.com/nullpointexception-i/agent-sphere</p></content>
+    </shape>
+  </data>
+  <note><content><p>这一页讲定位与总体架构。画成带三角坡屋顶的房子：顶部三角形屋顶，下面 SaaS 是 bole 业务系统，中间亮蓝色 AaaS 是核心层（模型路由/运行时/Skill Hub/会话记忆四格），PaaS 层是 K8s+Rancher+PG+Redis，最底部 IaaS 是阿里云 ECS 地基。</p></content></note>
+</slide>

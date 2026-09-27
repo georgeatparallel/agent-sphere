@@ -1,0 +1,176 @@
+<slide xmlns="https://www.larkoffice.com/sml/2.0">
+  <data>
+    <shape type="text" topLeftX="60" topLeftY="28" width="300" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" letterSpacing="1">
+        <p>05 · IAAS</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="872" topLeftY="28" width="60" height="24">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false" textAlign="right">
+        <p>07 / 13</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="60" width="840" height="44">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>技术架构 · IaaS：阿里云 ECS + ACR 镜像库</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="114" width="840" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>镜像入 ACR，服务上 ECS；manifest 定义从 namespace 到 widget 的完整资源拓扑</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="60" topLeftY="150" width="230" height="110" presetHandlers="6">
+      <fill>
+        <fillColor color="rgb(247,250,254)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <icon iconType="iconpark/Weather/cloudy.svg" topLeftX="78" topLeftY="166" width="28" height="28">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="78" topLeftY="202" width="200" height="28">
+      <content textType="body" fontSize="16" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>ACR 镜像库</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="78" topLeftY="234" width="200" height="22">
+      <content textType="body" fontSize="11.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>backend / frontend / widget 镜像</p>
+      </content>
+    </shape>
+    <line startX="298" startY="205" endX="336" endY="205">
+      <border color="rgb(37,99,235)" width="2"/>
+      <endArrow type="solid-triangle"/>
+    </line>
+    <shape type="rect" topLeftX="344" topLeftY="150" width="280" height="110" presetHandlers="6">
+      <fill>
+        <fillColor color="rgb(247,250,254)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <icon iconType="iconpark/Hardware/server.svg" topLeftX="362" topLeftY="166" width="28" height="28">
+      <fill>
+        <fillColor color="rgba(37,99,235,1)"/>
+      </fill>
+    </icon>
+    <shape type="text" topLeftX="362" topLeftY="202" width="250" height="28">
+      <content textType="body" fontSize="16" fontFamily="思源黑体" color="rgba(13,19,38,1)" bold="true" wrap="false">
+        <p>阿里云 ECS</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="362" topLeftY="234" width="250" height="22">
+      <content textType="body" fontSize="11.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>k3s 集群承载全部工作负载</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="292" width="300" height="26">
+      <content textType="body" fontSize="13" fontFamily="思源黑体" color="rgba(37,99,235,1)" bold="true" wrap="false" letterSpacing="1">
+        <p>manifest 资源拓扑</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="60" topLeftY="330" width="160" height="48" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(13,19,38)"/>
+      </fill>
+    </shape>
+    <shape type="text" topLeftX="72" topLeftY="344" width="136" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(255,255,255,1)" textAlign="center" wrap="false">
+        <p>Namespace</p>
+      </content>
+    </shape>
+    <line startX="140" startY="382" endX="140" endY="404">
+      <border color="rgb(37,99,235)" width="2"/>
+      <endArrow type="solid-triangle"/>
+    </line>
+    <shape type="rect" topLeftX="60" topLeftY="410" width="118" height="48" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(37,99,235)"/>
+      </fill>
+    </shape>
+    <shape type="text" topLeftX="68" topLeftY="424" width="102" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(255,255,255,1)" textAlign="center" wrap="false">
+        <p>ingress</p>
+      </content>
+    </shape>
+    <line startX="182" startY="434" endX="190" endY="434">
+      <border color="rgb(37,99,235)" width="2"/>
+      <endArrow type="solid-triangle"/>
+    </line>
+    <shape type="rect" topLeftX="192" topLeftY="410" width="118" height="48" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(232,238,248)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="200" topLeftY="424" width="102" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="center" wrap="false">
+        <p>backend</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="324" topLeftY="410" width="118" height="48" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(232,238,248)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="332" topLeftY="424" width="102" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="center" wrap="false">
+        <p>frontend</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="456" topLeftY="410" width="118" height="48" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(232,238,248)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="464" topLeftY="424" width="102" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="center" wrap="false">
+        <p>widget</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="588" topLeftY="410" width="118" height="48" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(232,238,248)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="596" topLeftY="424" width="102" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="center" wrap="false">
+        <p>postgres</p>
+      </content>
+    </shape>
+    <shape type="rect" topLeftX="720" topLeftY="410" width="118" height="48" presetHandlers="4">
+      <fill>
+        <fillColor color="rgb(232,238,248)"/>
+      </fill>
+      <border color="rgb(201,214,232)" width="1"/>
+    </shape>
+    <shape type="text" topLeftX="728" topLeftY="424" width="102" height="22">
+      <content textType="body" fontSize="13" fontFamily="Roboto Mono" color="rgba(13,19,38,1)" textAlign="center" wrap="false">
+        <p>redis</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="478" width="840" height="26">
+      <content textType="body" fontSize="12.5" fontFamily="思源黑体" color="rgba(83,97,116,1)" wrap="false">
+        <p>ingress 统一入口，路由到 backend / frontend / widget / postgres / redis</p>
+      </content>
+    </shape>
+    <line startX="60" startY="516" endX="900" endY="516">
+      <border color="rgb(226,230,238)" width="1"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="526" width="420" height="14">
+      <content textType="caption" fontSize="9" fontFamily="Roboto Mono" color="rgba(138,148,166,1)" wrap="false">
+        <p>AgentSphere · Interview Deck · 2026-09</p>
+      </content>
+    </shape>
+  </data>
+  <note>
+    <content textType="body">
+      <p>这一页是最底层的技术：阿里云 ECS 提供计算资源，ACR 做镜像库。部署走 GitOps——GitHub Actions 构建后端、前端、Widget 镜像推到 ACR，改写 k8s manifest 提交到 main，Fleet 在 k3s 上自动应用实现滚动更新。manifest 定义了从 namespace 到 ingress、再到五个服务的完整资源拓扑。这里体现的是对云原生部署链路的真实落地经验。</p>
+    </content>
+  </note>
+</slide>

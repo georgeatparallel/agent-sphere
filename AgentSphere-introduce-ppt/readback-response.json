@@ -1,0 +1,154 @@
+{
+  "ok": true,
+  "identity": "user",
+  "data": {
+    "content_saved": true,
+    "issues": {
+      "document": {
+        "errors": [],
+        "infos": [],
+        "warnings": []
+      },
+      "file": null,
+      "schema_version": "2.0",
+      "slide_size": {
+        "height": 540,
+        "width": 960
+      },
+      "slides": [
+        {
+          "element_count": 7,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 1,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 19,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 2,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 20,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 3,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 21,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 4,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 31,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 5,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 30,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 6,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 33,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 7,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 34,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 8,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 37,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 9,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 19,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 10,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 19,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 11,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 36,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 12,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 17,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 13,
+          "status": "passed",
+          "warnings": []
+        }
+      ],
+      "summary": {
+        "error_count": 0,
+        "info_count": 0,
+        "release_ready": true,
+        "screenshot_review_required": false,
+        "slide_count": 13,
+        "status": "passed",
+        "warning_count": 0
+      },
+      "tool": "xml_lint"
+    },
+    "path": "/Users/elvin/Desktop/Code/agent/agent-sphere/AgentSphere-面试PPT/readback.xml",
+    "revision_id": 14,
+    "scope": "presentation",
+    "size": 103884,
+    "xml_presentation_id": "UFj2sO8Mnlv7ncdcYSScRqRznkb"
+  }
+}

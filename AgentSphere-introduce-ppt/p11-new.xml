@@ -1,0 +1,85 @@
+<slide>
+  <data>
+    <shape width="300" height="24" topLeftX="60" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" letterSpacing="1" wrap="false"><p>06 · DEMO</p></content>
+    </shape>
+    <shape width="60" height="24" topLeftX="872" topLeftY="28" type="text">
+      <content textType="caption" fontSize="10" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" textAlign="right" wrap="false"><p>11 / 12</p></content>
+    </shape>
+    <shape width="840" height="44" topLeftX="60" topLeftY="60" type="text">
+      <content textType="title" fontSize="27" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>演示看点：三套系统现场演示</p></content>
+    </shape>
+    <shape width="840" height="26" topLeftX="60" topLeftY="114" type="text">
+      <content fontSize="13" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>演示时依次打开 Rancher 集群控制台、AgentSphere 主站、bole 业务页</p></content>
+    </shape>
+
+    <shape width="250" height="270" topLeftX="60" topLeftY="160" presetHandlers="6" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <icon width="32" height="32" topLeftX="84" topLeftY="186" iconType="iconpark/Connect/fork.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="210" height="28" topLeftX="84" topLeftY="232" type="text">
+      <content fontSize="16" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>Rancher · 集群控制台</p></content>
+    </shape>
+    <shape width="210" height="90" topLeftX="84" topLeftY="266" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)"><p>查看 K8s 集群、多副本 Pod、Ingress 路由与部署拓扑，演示 PaaS 层编排。</p></content>
+    </shape>
+    <icon width="20" height="20" topLeftX="84" topLeftY="388" iconType="iconpark/Office/link.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="200" height="24" topLeftX="110" topLeftY="386" type="text">
+      <content fontSize="10.5" fontFamily="Roboto Mono" color="rgba(37, 99, 235, 1)" wrap="false"><p>https://rancher.buukle.top</p></content>
+    </shape>
+
+    <shape width="250" height="270" topLeftX="355" topLeftY="160" presetHandlers="6" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <icon width="32" height="32" topLeftX="379" topLeftY="186" iconType="iconpark/Base/all-application.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="210" height="28" topLeftX="379" topLeftY="232" type="text">
+      <content fontSize="16" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>AgentSphere · 主站</p></content>
+    </shape>
+    <shape width="210" height="90" topLeftX="379" topLeftY="266" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)"><p>会话页多 Agent 卡片聚合，感知→规划→执行→反馈全程可见，Skill Hub 演示技能安装。</p></content>
+    </shape>
+    <icon width="20" height="20" topLeftX="379" topLeftY="388" iconType="iconpark/Office/link.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="200" height="24" topLeftX="405" topLeftY="386" type="text">
+      <content fontSize="10.5" fontFamily="Roboto Mono" color="rgba(37, 99, 235, 1)" wrap="false"><p>http://as.buukle.top</p></content>
+    </shape>
+
+    <shape width="250" height="270" topLeftX="650" topLeftY="160" presetHandlers="6" type="rect">
+      <fill><fillColor color="rgba(247, 250, 254, 1)" /></fill>
+      <border color="rgba(201, 214, 232, 1)" width="1" />
+    </shape>
+    <icon width="32" height="32" topLeftX="674" topLeftY="186" iconType="iconpark/Communicate/comment.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="210" height="28" topLeftX="674" topLeftY="232" type="text">
+      <content fontSize="16" fontFamily="思源黑体" color="rgba(13, 19, 38, 1)" bold="true" wrap="false"><p>bole · 业务系统</p></content>
+    </shape>
+    <shape width="210" height="90" topLeftX="674" topLeftY="266" type="text">
+      <content fontSize="12" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)"><p>业务页内嵌 Widget 对话，SSO 免登录，演示简历解析与智能寻访。</p></content>
+    </shape>
+    <icon width="20" height="20" topLeftX="674" topLeftY="388" iconType="iconpark/Office/link.svg">
+      <fill><fillColor color="rgba(37, 99, 235, 1)" /></fill>
+    </icon>
+    <shape width="200" height="24" topLeftX="700" topLeftY="386" type="text">
+      <content fontSize="10.5" fontFamily="Roboto Mono" color="rgba(37, 99, 235, 1)" wrap="false"><p>http://bole.buukle.top</p></content>
+    </shape>
+
+    <shape width="840" height="26" topLeftX="60" topLeftY="460" type="text">
+      <content fontSize="12.5" fontFamily="思源黑体" color="rgba(83, 97, 116, 1)" wrap="false"><p>本页为可选页：时间紧可直接跳过，不影响主线。</p></content>
+    </shape>
+    <line startX="60" startY="516" endX="900" endY="516"><border color="rgba(226, 230, 238, 1)" width="1" /></line>
+    <shape width="420" height="14" topLeftX="60" topLeftY="526" type="text">
+      <content fontSize="9" fontFamily="Roboto Mono" color="rgba(138, 148, 166, 1)" wrap="false"><p>agent-sphere · github.com/nullpointexception-i/agent-sphere</p></content>
+    </shape>
+  </data>
+  <note><content><p>这一页是演示引导页。演示时依次打开三处：Rancher 控制台查看 K8s 集群、多副本 Pod 与 Ingress 拓扑；AgentSphere 主站展示多 Agent 卡片聚合与四步闭环；bole 业务页展示 Widget 嵌入即用与 SSO 免登录。时间紧可以整页跳过，不影响主线。</p></content></note>
+</slide>

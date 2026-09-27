@@ -1,0 +1,47 @@
+<ns0:slide xmlns:ns0="https://www.larkoffice.com/sml/2.0" id="pxx">
+  <ns0:style>
+    <ns0:fill id="fxx">
+      <ns0:fillColor color="rgba(13, 19, 38, 1)" />
+    </ns0:fill>
+  </ns0:style>
+  <ns0:data>
+    <ns0:shape width="480" height="32" topLeftX="60" topLeftY="58" type="text" id="bCy">
+      <ns0:content textType="caption" fontSize="13" fontFamily="Roboto Mono" color="rgba(126, 166, 255, 1)" letterSpacing="1" wrap="false">
+        <ns0:p>AgentSphere · AaaS PLATFORM</ns0:p>
+      </ns0:content>
+    </ns0:shape>
+    <ns0:shape width="480" height="76" topLeftX="60" topLeftY="108" type="text" id="bCQ">
+      <ns0:content textType="title" fontSize="46" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" bold="true" letterSpacing="1" wrap="false">
+        <ns0:p>AgentSphere</ns0:p>
+      </ns0:content>
+    </ns0:shape>
+    <ns0:shape width="480" height="52" topLeftX="60" topLeftY="190" type="text" id="bCL">
+      <ns0:content textType="headline" fontSize="28" fontFamily="思源黑体" color="rgba(255, 255, 255, 1)" bold="true" wrap="false">
+        <ns0:p>AI Agent 即服务（AaaS）平台</ns0:p>
+      </ns0:content>
+    </ns0:shape>
+    <ns0:line id="bCS" startX="60" startY="264" endX="240.0027777563446" endY="264">
+      <ns0:border color="rgba(37, 99, 235, 1)" />
+    </ns0:line>
+    <ns0:shape width="470" height="96" topLeftX="60" topLeftY="286" type="text" id="bCm">
+      <ns0:content fontSize="15" fontFamily="思源黑体" color="rgba(174, 184, 206, 1)" lineSpacing="multiple:1.6">
+        <ns0:p>赋能业务系统 · 感知 → 规划 → 执行 → 反馈 全闭环</ns0:p>
+        <ns0:p>从 Agent 能力商品化，到业务零 AI 建模成本接入</ns0:p>
+      </ns0:content>
+    </ns0:shape>
+    <ns0:img id="bCs" src="RATYbJ2EZob7hZxdllscvbiDnTe" width="360" height="360" topLeftX="560" topLeftY="72">
+      <ns0:crop leftOffset="0" rightOffset="0" topOffset="0" bottomOffset="0" />
+    </ns0:img>
+    <ns0:shape width="560" height="28" topLeftX="60" topLeftY="478" type="text" id="bCV">
+      <ns0:content textType="caption" fontSize="12" fontFamily="Roboto Mono" color="rgba(122, 133, 160, 1)" wrap="false">
+        <ns0:p>agent-sphere · github.com/nullpointexception-i/agent-sphere</ns0:p>
+      </ns0:content>
+    </ns0:shape>
+  </ns0:data>
+  <ns0:note id="bCC">
+    <ns0:content>
+      <ns0:p>开场 30 秒：我是 AgentSphere 平台的作者。它把 Agent 能力做成 AaaS（Agent as a Service），让 bole 这类业务系统用很低的成本接入智力，形成感知、规划、执行、反馈的完整闭环。今天用 10 分钟讲清楚四件事：它是什么、服务谁、怎么组成、怎么跑稳，最后讲数据怎么管。</ns0:p>
+    </ns0:content>
+  </ns0:note>
+</ns0:slide>
+  

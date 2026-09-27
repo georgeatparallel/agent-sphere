@@ -1,0 +1,355 @@
+{
+  "ok": true,
+  "identity": "user",
+  "data": {
+    "content_saved": true,
+    "issues": {
+      "document": {
+        "errors": [],
+        "infos": [],
+        "warnings": []
+      },
+      "file": null,
+      "schema_version": "2.0",
+      "slide_size": {
+        "height": 540,
+        "width": 960
+      },
+      "slides": [
+        {
+          "element_count": 4,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 1,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 31,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 2,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 30,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 3,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 19,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 4,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 31,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 5,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 40,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 6,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 33,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 7,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 34,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 8,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 37,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 9,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 24,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 10,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 23,
+          "errors": [],
+          "infos": [],
+          "issues": [],
+          "slide_number": 11,
+          "status": "passed",
+          "warnings": []
+        },
+        {
+          "element_count": 6,
+          "errors": [],
+          "infos": [],
+          "issues": [
+            {
+              "code": "sparse_slide_content",
+              "element_ids": [
+                "bLC",
+                "bLj",
+                "bLk",
+                "bLi",
+                "bLv"
+              ],
+              "elements": [
+                "bLC",
+                "bLj",
+                "bLk",
+                "bLi",
+                "bLv"
+              ],
+              "hint": "Locate via related_objects[].xml_path. Review the rendered screenshot to decide whether the page is intentionally sparse.",
+              "level": "warning",
+              "measurement": {
+                "content_coverage_ratio": 0.012,
+                "content_element_count": 5,
+                "slide_area": 518400,
+                "visible_content_area": 6373.741
+              },
+              "message": "slide visible content coverage 1.2% is below 3.5%",
+              "related_objects": [
+                {
+                  "bbox": {
+                    "height": 24,
+                    "width": 300,
+                    "x": 60,
+                    "y": 28
+                  },
+                  "element_id": "bLC",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[12]/data/shape[1]"
+                },
+                {
+                  "bbox": {
+                    "height": 24,
+                    "width": 60,
+                    "x": 872,
+                    "y": 28
+                  },
+                  "element_id": "bLj",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[12]/data/shape[2]"
+                },
+                {
+                  "bbox": {
+                    "height": 36.93294657312465,
+                    "width": 100.21872638963835,
+                    "x": 381.5983405288721,
+                    "y": 238.84744558373808
+                  },
+                  "element_id": "bLk",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[12]/data/shape[4]"
+                },
+                {
+                  "bbox": {
+                    "height": 14,
+                    "width": 420,
+                    "x": 60,
+                    "y": 526
+                  },
+                  "element_id": "bLi",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[12]/data/shape[5]"
+                },
+                {
+                  "bbox": {
+                    "height": 0,
+                    "width": 840.0005952378843,
+                    "x": 60,
+                    "y": 516
+                  },
+                  "element_id": "bLv",
+                  "kind": "line",
+                  "type": "line",
+                  "xml_path": "slide[12]/data/line[1]"
+                }
+              ],
+              "rule": {
+                "comparison": "content_coverage_ratio \u003c threshold",
+                "id": "sparse_slide_content",
+                "name": "slide_visible_content_coverage",
+                "threshold": 0.035
+              },
+              "schema_version": "2.0",
+              "target": {
+                "bbox": {
+                  "height": 540,
+                  "width": 960,
+                  "x": 0,
+                  "y": 0
+                },
+                "slide_number": 12
+              }
+            }
+          ],
+          "slide_number": 12,
+          "status": "needs_screenshot_review",
+          "warnings": [
+            {
+              "code": "sparse_slide_content",
+              "element_ids": [
+                "bLC",
+                "bLj",
+                "bLk",
+                "bLi",
+                "bLv"
+              ],
+              "elements": [
+                "bLC",
+                "bLj",
+                "bLk",
+                "bLi",
+                "bLv"
+              ],
+              "hint": "Locate via related_objects[].xml_path. Review the rendered screenshot to decide whether the page is intentionally sparse.",
+              "level": "warning",
+              "measurement": {
+                "content_coverage_ratio": 0.012,
+                "content_element_count": 5,
+                "slide_area": 518400,
+                "visible_content_area": 6373.741
+              },
+              "message": "slide visible content coverage 1.2% is below 3.5%",
+              "related_objects": [
+                {
+                  "bbox": {
+                    "height": 24,
+                    "width": 300,
+                    "x": 60,
+                    "y": 28
+                  },
+                  "element_id": "bLC",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[12]/data/shape[1]"
+                },
+                {
+                  "bbox": {
+                    "height": 24,
+                    "width": 60,
+                    "x": 872,
+                    "y": 28
+                  },
+                  "element_id": "bLj",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[12]/data/shape[2]"
+                },
+                {
+                  "bbox": {
+                    "height": 36.93294657312465,
+                    "width": 100.21872638963835,
+                    "x": 381.5983405288721,
+                    "y": 238.84744558373808
+                  },
+                  "element_id": "bLk",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[12]/data/shape[4]"
+                },
+                {
+                  "bbox": {
+                    "height": 14,
+                    "width": 420,
+                    "x": 60,
+                    "y": 526
+                  },
+                  "element_id": "bLi",
+                  "kind": "shape",
+                  "type": "text",
+                  "xml_path": "slide[12]/data/shape[5]"
+                },
+                {
+                  "bbox": {
+                    "height": 0,
+                    "width": 840.0005952378843,
+                    "x": 60,
+                    "y": 516
+                  },
+                  "element_id": "bLv",
+                  "kind": "line",
+                  "type": "line",
+                  "xml_path": "slide[12]/data/line[1]"
+                }
+              ],
+              "rule": {
+                "comparison": "content_coverage_ratio \u003c threshold",
+                "id": "sparse_slide_content",
+                "name": "slide_visible_content_coverage",
+                "threshold": 0.035
+              },
+              "schema_version": "2.0",
+              "target": {
+                "bbox": {
+                  "height": 540,
+                  "width": 960,
+                  "x": 0,
+                  "y": 0
+                },
+                "slide_number": 12
+              }
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "error_count": 0,
+        "info_count": 0,
+        "release_ready": true,
+        "screenshot_review_required": true,
+        "slide_count": 12,
+        "status": "needs_screenshot_review",
+        "warning_count": 1
+      },
+      "tool": "xml_lint"
+    },
+    "path": "/Users/elvin/Desktop/Code/agent/agent-sphere/AgentSphere-面试PPT/f14.xml",
+    "revision_id": 386,
+    "scope": "presentation",
+    "size": 97564,
+    "xml_presentation_id": "UFj2sO8Mnlv7ncdcYSScRqRznkb"
+  }
+}

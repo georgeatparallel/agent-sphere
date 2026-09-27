@@ -1,0 +1,44 @@
+<slide xmlns="https://www.larkoffice.com/sml/2.0">
+  <style>
+    <fill>
+      <fillColor color="rgb(13,19,38)"/>
+    </fill>
+  </style>
+  <data>
+    <shape type="text" topLeftX="60" topLeftY="58" width="480" height="32">
+      <content textType="caption" fontSize="13" fontFamily="Roboto Mono" color="rgba(126,166,255,1)" wrap="false" letterSpacing="1">
+        <p>AgentSphere · AaaS PLATFORM</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="108" width="480" height="76">
+      <content textType="title" fontSize="46" fontFamily="思源黑体" color="rgba(255,255,255,1)" bold="true" wrap="false" letterSpacing="1">
+        <p>AgentSphere</p>
+      </content>
+    </shape>
+    <shape type="text" topLeftX="60" topLeftY="190" width="480" height="52">
+      <content textType="headline" fontSize="28" fontFamily="思源黑体" color="rgba(255,255,255,1)" wrap="false">
+        <p>AI Agent 即服务（AaaS）平台</p>
+      </content>
+    </shape>
+    <line startX="60" startY="264" endX="240" endY="264">
+      <border color="rgb(37,99,235)" width="2"/>
+    </line>
+    <shape type="text" topLeftX="60" topLeftY="286" width="470" height="96">
+      <content textType="body" fontSize="15" fontFamily="思源黑体" color="rgba(174,184,206,1)" lineSpacing="multiple:1.6">
+        <p>赋能业务系统 · 感知 → 规划 → 执行 → 反馈 全闭环</p>
+        <p>从 Agent 能力商品化，到业务零 AI 建模成本接入</p>
+      </content>
+    </shape>
+    <img src="RATYbJ2EZob7hZxdllscvbiDnTe" topLeftX="560" topLeftY="72" width="360" height="360"/>
+    <shape type="text" topLeftX="60" topLeftY="478" width="480" height="28">
+      <content textType="caption" fontSize="12" fontFamily="Roboto Mono" color="rgba(122,133,160,1)" wrap="false">
+        <p>10-MIN INTERVIEW DECK · 2026-09</p>
+      </content>
+    </shape>
+  </data>
+  <note>
+    <content textType="body">
+      <p>开场 30 秒：我是 AgentSphere 平台的作者。它把 Agent 能力做成 AaaS（Agent as a Service），让 bole 这类业务系统用很低的成本接入智力，形成感知、规划、执行、反馈的完整闭环。今天用 10 分钟讲清楚四件事：它是什么、服务谁、怎么组成、怎么跑稳，最后讲数据怎么管。</p>
+    </content>
+  </note>
+</slide>
