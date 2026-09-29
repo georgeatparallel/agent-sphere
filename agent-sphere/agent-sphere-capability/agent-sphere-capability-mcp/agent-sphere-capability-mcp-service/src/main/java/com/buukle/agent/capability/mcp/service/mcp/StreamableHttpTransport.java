@@ -161,6 +161,11 @@ public class StreamableHttpTransport implements McpTransportClient {
 
     @Override
     public String callTool(String toolName, String argumentsJson) {
+        return callTool(toolName, argumentsJson, McpCallContext.none());
+    }
+
+    @Override
+    public String callTool(String toolName, String argumentsJson, McpCallContext callContext) {
         ensureInitialized();
         try {
             ObjectNode request = JSON.createObjectNode();
@@ -180,7 +185,7 @@ public class StreamableHttpTransport implements McpTransportClient {
                 params.set(CALL_ARGUMENTS, JSON.createObjectNode());
             }
 
-            String responseJson = doPostRaw(JSON.writeValueAsString(request));
+            String responseJson = doPostRaw(JSON.writeValueAsString(request), callContext);
             JsonNode root = JSON.readTree(responseJson);
             if (root.has(JSONRPC_ERROR)) {
                 JsonNode err = root.get(JSONRPC_ERROR);
@@ -231,6 +236,10 @@ public class StreamableHttpTransport implements McpTransportClient {
     }
 
     private String doPostRaw(String body) {
+        return doPostRaw(body, McpCallContext.none());
+    }
+
+    private String doPostRaw(String body, McpCallContext callContext) {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(endpointUrl))
@@ -240,6 +249,7 @@ public class StreamableHttpTransport implements McpTransportClient {
                     .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
 
             applyAuth(builder);
+            applyCallContext(builder, callContext);
             if (sessionId != null) {
                 builder.header(HEADER_MCP_SESSION_ID, sessionId);
             }
@@ -300,6 +310,21 @@ public class StreamableHttpTransport implements McpTransportClient {
             return "{\"result\":{}}";
         }
         return result;
+    }
+
+    /**
+     * 叠加本次调用的附加请求头（任务级凭证）。
+     *
+     * <p>放在 applyAuth 之后：authConfig 是登记 MCP 时管理员配的，任务级凭证是调用方给的，
+     * 两者名字空间不重叠（凭证头名由 agent-sphere 固定），因此覆盖顺序不影响语义，
+     * 但显式保证凭证一定被带上。
+     */
+    private void applyCallContext(HttpRequest.Builder builder, McpCallContext callContext) {
+        if (callContext == null || callContext.isEmpty()) return;
+        String credential = callContext.header(McpProtocolConstants.HEADER_TASK_MCP_CREDENTIAL);
+        if (credential != null && !credential.isBlank()) {
+            builder.header(McpProtocolConstants.HEADER_TASK_MCP_CREDENTIAL, credential);
+        }
     }
 
     private void applyAuth(HttpRequest.Builder builder) {

@@ -1,6 +1,7 @@
 package com.buukle.agent.bootstrap.controller;
 
 import com.buukle.agent.capability.builtin.spi.CapabilityBuiltinSpi;
+import com.buukle.agent.common.mcp.TaskMcpCredentialStore;
 import com.buukle.agent.capability.mcp.spi.CapabilityMcpSpi;
 import com.buukle.agent.instance.spi.ClarificationSpi;
 import com.buukle.agent.instance.spi.SessionTodoSpi;
@@ -47,13 +48,15 @@ class ToolExecutorSkillTest {
     ClarificationSpi clarificationSpi;
     @Mock
     DelegateService delegateService;
+    @Mock
+    TaskMcpCredentialStore taskMcpCredentialStore;
 
     ToolExecutor toolExecutor;
 
     @BeforeEach
     void setUp() {
         toolExecutor = new ToolExecutor(mcpSpis, builtinSpi, cliExecutorService, sessionTodoSpi,
-                eventPublisher, clarificationSpi, delegateService);
+                eventPublisher, clarificationSpi, delegateService, taskMcpCredentialStore);
     }
 
     private RuntimeTool delegateTool() {

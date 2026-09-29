@@ -29,6 +29,11 @@ public final class McpProtocolConstants {
     public static final String HEADER_ACCEPT = "Accept";
     public static final String HEADER_MCP_SESSION_ID = "MCP-Session-Id";
     public static final String HEADER_MCP_PROTOCOL_VERSION = "MCP-Protocol-Version";
+    /**
+     * 任务级 MCP 凭证头。名字由 agent-sphere 固定，不接受调用方自定义：
+     * 若允许外部指定 header 名，就能借任务提交覆盖 Authorization 等已登记 MCP 的鉴权头。
+     */
+    public static final String HEADER_TASK_MCP_CREDENTIAL = "X-Task-Mcp-Credential";
     public static final String CONTENT_TYPE_JSON = "application/json";
     public static final String CONTENT_TYPE_SSE = "text/event-stream";
     public static final String ACCEPT_JSON_SSE = "application/json,text/event-stream";

@@ -111,8 +111,13 @@ public class LegacySseTransport implements McpTransportClient {
 
     @Override
     public String callTool(String toolName, String argumentsJson) {
+        return callTool(toolName, argumentsJson, McpCallContext.none());
+    }
+
+    @Override
+    public String callTool(String toolName, String argumentsJson, McpCallContext callContext) {
         ensureInitialized();
-        return doRpcCallTool(toolName, argumentsJson);
+        return doRpcCallTool(toolName, argumentsJson, callContext);
     }
 
     @Override
@@ -168,7 +173,7 @@ public class LegacySseTransport implements McpTransportClient {
         }
     }
 
-    private String doRpcCallTool(String toolName, String argumentsJson) {
+    private String doRpcCallTool(String toolName, String argumentsJson, McpCallContext callContext) {
         try {
             ObjectNode request = JSON.createObjectNode();
             request.put(JSONRPC, JSONRPC_VERSION);
@@ -186,7 +191,7 @@ public class LegacySseTransport implements McpTransportClient {
                 params.set(CALL_ARGUMENTS, JSON.createObjectNode());
             }
 
-            JsonNode root = JSON.readTree(doPost(request.toString()));
+            JsonNode root = JSON.readTree(doPost(request.toString(), callContext));
             if (root.has(JSONRPC_ERROR)) {
                 JsonNode err = root.get(JSONRPC_ERROR);
                 String errMsg = err.has("message") ? err.get("message").asText() : "unknown legacy SSE error";
@@ -205,6 +210,10 @@ public class LegacySseTransport implements McpTransportClient {
     }
 
     private String doPost(String body) {
+        return doPost(body, McpCallContext.none());
+    }
+
+    private String doPost(String body, McpCallContext callContext) {
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(postEndpointUrl))
@@ -212,6 +221,7 @@ public class LegacySseTransport implements McpTransportClient {
                     .timeout(rpcTimeout)
                     .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
             applyAuth(builder);
+            applyCallContext(builder, callContext);
 
             HttpResponse<String> response = httpClient.send(builder.build(),
                     HttpResponse.BodyHandlers.ofString());
@@ -225,6 +235,15 @@ public class LegacySseTransport implements McpTransportClient {
         } catch (Exception e) {
             log.error("Legacy SSE POST request failed", e);
             throw new BizException(CapabilityMcpErrorCode.MCP_EXECUTE_FAILED, "Legacy SSE POST failed: " + e.getMessage());
+        }
+    }
+
+    /** 叠加本次调用的附加请求头（任务级凭证），与 Streamable 传输保持同一语义。 */
+    private void applyCallContext(HttpRequest.Builder builder, McpCallContext callContext) {
+        if (callContext == null || callContext.isEmpty()) return;
+        String credential = callContext.header(McpProtocolConstants.HEADER_TASK_MCP_CREDENTIAL);
+        if (credential != null && !credential.isBlank()) {
+            builder.header(McpProtocolConstants.HEADER_TASK_MCP_CREDENTIAL, credential);
         }
     }
 

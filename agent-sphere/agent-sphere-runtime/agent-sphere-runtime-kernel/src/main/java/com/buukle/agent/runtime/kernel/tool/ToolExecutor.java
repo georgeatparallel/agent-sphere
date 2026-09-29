@@ -3,6 +3,7 @@ package com.buukle.agent.runtime.kernel.tool;
 import com.buukle.agent.capability.builtin.dtvo.enums.BuiltinToolEnum;
 import com.buukle.agent.capability.builtin.spi.CapabilityBuiltinSpi;
 import com.buukle.agent.capability.mcp.spi.CapabilityMcpSpi;
+import com.buukle.agent.common.mcp.TaskMcpCredentialStore;
 import com.buukle.agent.instance.dtvo.dto.TodowriteResultDTO;
 import com.buukle.agent.instance.dtvo.vo.SessionTodoVO;
 import com.buukle.agent.instance.spi.ClarificationSpi;
@@ -51,6 +52,8 @@ public class ToolExecutor {
     private final ApplicationEventPublisher eventPublisher;
     private final ClarificationSpi clarificationSpi;
     private final DelegateService delegateService;
+    /** 任务级 MCP 凭证来源。 */
+    private final TaskMcpCredentialStore taskMcpCredentialStore;
 
     /** 主循环工具入口：以根上下文执行（主 Agent 无父级限制）。 */
     public String execute(TurnToolCall tc, Long sessionId, Long runId, List<RuntimeTool> tools) {
@@ -85,7 +88,8 @@ public class ToolExecutor {
             if (CAPABILITY_TYPE_MCP.equals(type) && !mcpSpis.isEmpty()) {
                 return mcpSpis.get(0).executeTool(
                         (String) binding.get(ExecBindingKeys.MCP_SERVER_URL),
-                        (String) binding.get(ExecBindingKeys.MCP_NATIVE_TOOL_NAME), args);
+                        (String) binding.get(ExecBindingKeys.MCP_NATIVE_TOOL_NAME), args,
+                        resolveTaskMcpCredential(sessionId));
             }
             if (CAPABILITY_TYPE_BUILTIN.equals(type) && ChatClarification.CLARIFICATION_TOOL_NAME.equals(tc.name())) {
                 try {
@@ -136,6 +140,19 @@ public class ToolExecutor {
             log.warn("Tool execution failed: tool={}", tc.name(), e);
             return JSON_ERROR_EXECUTION + e.getMessage() + "\"}";
         }
+    }
+
+    /**
+     * 取当前任务的任务级 MCP 凭证。
+     *
+     * <p>从 Redis 按 sessionId 取，而不是从工具入参或 binding 里取：凭证一旦进入模型可见的
+     * 任何一处（入参、binding、prompt）就等于交给模型保管，Bole 侧的「按收藏者隔离」随之失效。
+     * 取不到时返回 null，MCP 调用退化为无凭证，服务端会拒绝 —— 这是安全默认值。
+     */
+    private String resolveTaskMcpCredential(Long sessionId) {
+        // sessionId 为 null 或 Redis 里没有凭证时返回 null：McpCallContext 会退化为「不带凭证」，
+        // 服务端随即拒绝 —— 安全默认值，且不会让整个 MCP 通道不可用。
+        return taskMcpCredentialStore.get(sessionId);
     }
 
     public String resolveDisplayName(String toolName, List<RuntimeTool> tools) {

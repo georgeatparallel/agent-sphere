@@ -31,6 +31,15 @@ public interface McpTransportClient extends AutoCloseable {
     String callTool(String toolName, String argumentsJson);
 
     /**
+     * 带调用上下文的工具调用：附加请求头（如任务级凭证）在这一次请求上生效。
+     *
+     * <p>默认实现忽略上下文，保证既有实现方无需改动；需要注入任务凭证的传输实现覆写本方法。
+     */
+    default String callTool(String toolName, String argumentsJson, McpCallContext callContext) {
+        return callTool(toolName, argumentsJson);
+    }
+
+    /**
      * Check if the client is still connected/initialized.
      */
     boolean isConnected();

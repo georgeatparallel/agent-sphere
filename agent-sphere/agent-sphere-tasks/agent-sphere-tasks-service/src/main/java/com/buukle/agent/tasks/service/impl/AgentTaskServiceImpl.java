@@ -3,6 +3,7 @@ package com.buukle.agent.tasks.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.buukle.agent.common.mcp.TaskMcpCredentialStore;
 import com.buukle.agent.common.config.AgentRuntimeProperties;
 import com.buukle.agent.common.context.AuthContext;
 import com.buukle.agent.common.context.TaskLoopLimitHolder;
@@ -89,6 +90,7 @@ public class AgentTaskServiceImpl implements AgentTaskService {
     private final TaskContractValidator contractValidator;
     private final AgentLlmInteractionRecordSpi llmInteractionRecordSpi;
     private final AgentToolCallRecordSpi toolCallRecordSpi;
+    private final TaskMcpCredentialStore taskMcpCredentialStore;
 
     @Value("${hri-ai.tasks.poll-interval:2s}")
     private Duration pollInterval;
@@ -118,6 +120,10 @@ public class AgentTaskServiceImpl implements AgentTaskService {
             sessionDTO.setAgentInstanceId(instance.getId());
             sessionDTO.setTitle(titleOf(dto.getGoal()));
             SessionVO session = sessionSpi.createSession(sessionDTO);
+
+            // 必须在 chat 之前登记：工具调用发生在 run 执行过程中，晚一步登记会导致
+            // 首个 MCP 调用就拿不到凭证（表现为「第一个候选人没查重，后面的都查了」）。
+            taskMcpCredentialStore.put(session.getId(), dto.getMcpCredential());
 
             SendMessageDTO message = new SendMessageDTO();
             message.setMessage(buildPrompt(dto));
@@ -636,6 +642,9 @@ public class AgentTaskServiceImpl implements AgentTaskService {
         if (updated > 0) {
             task.setStatus(status);
             task.setResultJson(resultJson);
+            // 任务已终态：凭证没有存在意义了，立刻清理而不是等 TTL。
+            // 放在 notifyTerminal 之前，保证即使回调方超时/异常也已完成清理。
+            taskMcpCredentialStore.evict(task.getSessionId());
             taskCallbackService.notifyTerminal(task);
         }
     }

@@ -25,6 +25,7 @@ import com.buukle.agent.tasks.repository.AgentTaskArtifactMapper;
 import com.buukle.agent.tasks.repository.AgentTaskMapper;
 import com.buukle.agent.tasks.service.TaskCallbackService;
 import com.buukle.agent.tasks.service.TaskContractValidator;
+import com.buukle.agent.common.mcp.TaskMcpCredentialStore;
 import com.buukle.agent.tasks.service.impl.AgentTaskServiceImpl;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.BeforeAll;
@@ -64,6 +65,8 @@ class AgentTaskServiceTest {
     AgentTaskMapper taskMapper;
     @Mock
     AgentTaskArtifactMapper artifactMapper;
+    @Mock
+    TaskMcpCredentialStore taskMcpCredentialStore;
     @Mock
     InstanceSpi instanceSpi;
     @Mock

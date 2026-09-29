@@ -12,6 +12,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- 任务级 MCP 凭证需要跨副本共享（backend replicas=2），故 common 引入 Redis。
+             只用 StringRedisTemplate，不引 Redisson，避免给基础模块带来额外负担。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>

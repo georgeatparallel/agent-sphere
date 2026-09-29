@@ -11,6 +11,8 @@ import com.buukle.agent.capability.mcp.exception.CapabilityMcpErrorCode;
 import com.buukle.agent.capability.mcp.repository.McpMapper;
 import com.buukle.agent.capability.mcp.service.CapabilityMcpService;
 import com.buukle.agent.capability.mcp.service.converter.CapabilityMcpConverter;
+import com.buukle.agent.capability.mcp.service.mcp.McpCallContext;
+import com.buukle.agent.capability.mcp.service.mcp.McpProtocolConstants;
 import com.buukle.agent.capability.mcp.service.mcp.McpTransportClient;
 import com.buukle.agent.capability.mcp.service.mcp.McpTransportFactory;
 import com.buukle.agent.common.config.AgentRuntimeProperties;
@@ -129,38 +131,56 @@ public class CapabilityMcpServiceImpl extends ServiceImpl<McpMapper, CapabilityM
 
     @Override
     public String executeTool(String serverUrl, String toolName, String argumentsJson) {
+        return executeTool(serverUrl, toolName, argumentsJson, null);
+    }
+
+    @Override
+    public String executeTool(String serverUrl, String toolName, String argumentsJson, String taskMcpCredential) {
         CapabilityMcp mcp = lambdaQuery()
                 .eq(CapabilityMcp::getServerUrl, serverUrl)
                 .last(SQL_LIMIT_ONE)
                 .one();
 
+        // 凭证只落在本次请求上，不挂在缓存的 transport 实例上：transport 按 mcpId 复用，
+        // 挂实例会让并发任务互相覆盖凭证。
+        McpCallContext callContext = McpCallContext.ofTaskCredential(taskMcpCredential);
+
         if (mcp == null) {
             log.warn(DIRECT_HTTP_HINT, serverUrl);
-            return executeDirectHttp(serverUrl, toolName, argumentsJson);
+            return executeDirectHttp(serverUrl, toolName, argumentsJson, callContext);
         }
 
         try {
             McpTransportClient client = mcpTransportFactory.getOrCreateClient(
                     mcp.getId(), mcp.getServerUrl(), mcp.getServerType(), mcp.getAuthConfig());
-            return client.callTool(toolName, argumentsJson);
+            return client.callTool(toolName, argumentsJson, callContext);
         } catch (Exception e) {
             log.error("MCP tool call failed via client, falling back to direct HTTP: {}", e.getMessage());
-            return executeDirectHttp(serverUrl, toolName, argumentsJson);
+            return executeDirectHttp(serverUrl, toolName, argumentsJson, callContext);
         }
     }
 
     /**
      * Fallback direct HTTP call (old behavior).
      */
-    private String executeDirectHttp(String serverUrl, String toolName, String argumentsJson) {
+    private String executeDirectHttp(String serverUrl, String toolName, String argumentsJson,
+            McpCallContext callContext) {
         try {
             String url = serverUrl.endsWith("/") ? serverUrl + toolName : serverUrl + "/" + toolName;
-            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+            java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder()
                     .uri(java.net.URI.create(url))
                     .header(HEADER_CONTENT_TYPE, APPLICATION_JSON)
                     .timeout(directReadTimeout)
-                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(argumentsJson))
-                    .build();
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(argumentsJson));
+            // 兜底路径同样要带凭证：否则 MCP 客户端一挂，任务凭证就静默失效，
+            // 表现为「偶发地不查重」，极难排查。
+            if (callContext != null) {
+                String credential = callContext.header(McpProtocolConstants.HEADER_TASK_MCP_CREDENTIAL);
+                if (credential != null && !credential.isBlank()) {
+                    builder.header(McpProtocolConstants.HEADER_TASK_MCP_CREDENTIAL, credential);
+                }
+            }
+            java.net.http.HttpRequest request = builder.build();
             java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
                     .connectTimeout(directConnectTimeout)
                     .build();
