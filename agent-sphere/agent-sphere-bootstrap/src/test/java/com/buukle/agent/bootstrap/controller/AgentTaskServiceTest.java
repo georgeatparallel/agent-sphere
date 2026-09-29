@@ -43,6 +43,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -278,6 +280,57 @@ class AgentTaskServiceTest {
         assertEquals(Boolean.TRUE, sent.getNoClarification());
         org.junit.jupiter.api.Assertions.assertTrue(sent.getMessage().contains("整理月报"));
         org.junit.jupiter.api.Assertions.assertTrue(sent.getMessage().contains("禁止向用户提问"));
+    }
+
+    /**
+     * 【任务配置】段必须渲染为 Markdown 小节，而不是 JSON。
+     *
+     * <p>config 里装的是给模型执行的指令；JSON 的引号与花括号会让模型把它当数据读，
+     * 长句规则也更难被遵循。这条断言直接盯住"别回退成 JSON"。
+     */
+    @Test
+    void submit_shouldRenderTaskConfigAsMarkdownSections() {
+        stubIdentity();
+        given(instanceSpi.listInstances(any(), any(), any())).willReturn(List.of(instance(2L)));
+
+        CreateTaskDTO dto = new CreateTaskDTO();
+        dto.setGoal("寻访候选人");
+        dto.setCode("bole");
+        dto.setSubject("elvin");
+        dto.setBusinessType("sourcing");
+        java.util.Map<String, Object> section = new java.util.LinkedHashMap<>();
+        section.put("title", "硬性门槛（必要条件，任一不满足即不得收藏）");
+        section.put("body", "学历符合其一：bachelor；期望薪资 ≥ 30K。");
+        dto.setConfig(java.util.Map.of("sections", java.util.List.of(section)));
+        dto.setExpectedOutput(java.util.Map.of(
+                "type", "object",
+                "properties", java.util.Map.of("status", java.util.Map.of("type", "string"))));
+
+        SessionVO session = new SessionVO();
+        session.setId(11L);
+        given(sessionSpi.createSession(any(CreateSessionDTO.class))).willReturn(session);
+        ChatMessageResponseVO chatResp = new ChatMessageResponseVO();
+        chatResp.setRunId(22L);
+        given(chatRuntimeService.chat(anyLong(), any(SendMessageDTO.class))).willReturn(chatResp);
+        given(taskMapper.insert(any(AgentTask.class))).willAnswer(inv -> {
+            inv.<AgentTask>getArgument(0).setId(1L);
+            return 1;
+        });
+
+        taskService.submit(dto, AUTH);
+
+        ArgumentCaptor<SendMessageDTO> messageCaptor = ArgumentCaptor.forClass(SendMessageDTO.class);
+        verify(chatRuntimeService).chat(anyLong(), messageCaptor.capture());
+        String prompt = messageCaptor.getValue().getMessage();
+
+        assertTrue(prompt.contains("### 硬性门槛（必要条件，任一不满足即不得收藏）"), prompt);
+        assertTrue(prompt.contains("学历符合其一：bachelor"), prompt);
+        // 不得残留 JSON 结构（花括号 / title 字段名）
+        assertFalse(prompt.contains("{\"sections\""), prompt);
+        assertFalse(prompt.contains("\"title\""), prompt);
+        // 期望输出是 JSON Schema，必须保持 JSON 原样（模型需要字面 schema 才能产出合规结构）
+        assertTrue(prompt.contains("【期望输出】"), prompt);
+        assertTrue(prompt.contains("\"type\":\"object\""), prompt);
     }
 
     @Test

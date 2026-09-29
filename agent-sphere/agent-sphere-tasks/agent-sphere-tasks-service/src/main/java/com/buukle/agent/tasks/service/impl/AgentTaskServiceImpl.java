@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.buukle.agent.common.mcp.TaskMcpCredentialStore;
+import com.buukle.agent.util.markdown.MarkdownRenderer;
 import com.buukle.agent.common.config.AgentRuntimeProperties;
 import com.buukle.agent.common.context.AuthContext;
 import com.buukle.agent.common.context.TaskLoopLimitHolder;
@@ -677,7 +678,9 @@ public class AgentTaskServiceImpl implements AgentTaskService {
             sb.append(dto.getGoal());
         }
         if (dto.getConfig() != null && !dto.getConfig().isEmpty()) {
-            sb.append(MSG_TASK_CONFIG_HEADER).append(JsonUtils.toJson(dto.getConfig()));
+            // 任务配置渲染为 Markdown 而非 JSON：config 里放的是给模型执行的指令，
+            // JSON 的花括号与引号会让模型把它当数据读，长句规则也更难被当作指令遵循。
+            sb.append(MSG_TASK_CONFIG_HEADER).append(MarkdownRenderer.renderConfig(dto.getConfig()));
         }
         if (dto.getExpectedOutput() != null && !dto.getExpectedOutput().isEmpty()) {
             sb.append(MSG_EXPECTED_OUTPUT_HEADER).append(JsonUtils.toJson(dto.getExpectedOutput()));
