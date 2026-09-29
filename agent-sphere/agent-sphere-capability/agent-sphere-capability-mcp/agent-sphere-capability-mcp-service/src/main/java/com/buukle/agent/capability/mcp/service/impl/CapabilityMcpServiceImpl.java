@@ -199,6 +199,14 @@ public class CapabilityMcpServiceImpl extends ServiceImpl<McpMapper, CapabilityM
             McpTransportClient client = mcpTransportFactory.getOrCreateClient(
                     mcp.getId(), mcp.getServerUrl(), mcp.getServerType(), mcp.getAuthConfig());
             return client.callTool(toolName, argumentsJson, callContext);
+        } catch (BizException e) {
+            // 配置类错误（如 authConfig 非法）必须原样抛出：直连兜底打的是另一个 URL 且不带鉴权，
+            // 走兜底只会把「配置写错了」伪装成「网络/协议不通」，把根因埋掉。
+            if (CapabilityMcpErrorCode.MCP_AUTH_CONFIG_INVALID.getCode().equals(e.getErrorCode())) {
+                throw e;
+            }
+            log.error("MCP tool call failed via client, falling back to direct HTTP: {}", e.getMessage());
+            return executeDirectHttp(serverUrl, toolName, argumentsJson, callContext);
         } catch (Exception e) {
             log.error("MCP tool call failed via client, falling back to direct HTTP: {}", e.getMessage());
             return executeDirectHttp(serverUrl, toolName, argumentsJson, callContext);

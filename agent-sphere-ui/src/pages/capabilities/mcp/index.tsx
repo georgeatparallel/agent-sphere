@@ -513,6 +513,20 @@ export default function McpList() {
               ]}
             />
           </Form.Item>
+          <Form.Item
+            name="authConfig"
+            label={labelWithRule(
+              intl.formatMessage({ id: 'pages.capabilities.mcp.authConfig' }),
+              intl.formatMessage({ id: 'pages.hint.text' }),
+            )}
+          >
+            <Input.TextArea
+              rows={3}
+              placeholder={intl.formatMessage({
+                id: 'pages.capabilities.mcp.authConfigPlaceholder',
+              })}
+            />
+          </Form.Item>
         </Form>
       </Modal>
       <Modal

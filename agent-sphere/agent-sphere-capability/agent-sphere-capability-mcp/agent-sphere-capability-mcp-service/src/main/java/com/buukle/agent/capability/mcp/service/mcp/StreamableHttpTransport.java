@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.buukle.agent.capability.mcp.service.mcp.McpProtocolConstants.*;
@@ -29,7 +30,8 @@ public class StreamableHttpTransport implements McpTransportClient {
 
     private final HttpClient httpClient;
     private final String endpointUrl;
-    private final String authConfigJson;
+    /** 解析后的出站鉴权头；构造期一次性解析，避免每次请求重复解析与重复报错。 */
+    private final Map<String, String> authHeaders;
     private final Duration connectTimeout;
     private final Duration rpcTimeout;
     private final AtomicLong requestId = new AtomicLong(1);
@@ -43,7 +45,7 @@ public class StreamableHttpTransport implements McpTransportClient {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(connectTimeout)
                 .build();
-        this.authConfigJson = authConfig;
+        this.authHeaders = McpAuthHeaders.parse(authConfig);
         this.endpointUrl = resolveEndpoint(serverUrl, serverType);
     }
 
@@ -73,6 +75,34 @@ public class StreamableHttpTransport implements McpTransportClient {
             return base + DEFAULT_SSE_PATH;
         }
         return base + DEFAULT_MCP_PATH;
+    }
+
+
+    /** 单个响应体片段的最大长度，避免把整页 HTML 塞进错误消息。 */
+    private static final int MAX_ERROR_BODY_LENGTH = 300;
+
+    private static String abbreviate(String body) {
+        if (body == null || body.isBlank()) {
+            return "<empty>";
+        }
+        String oneLine = body.replaceAll("\\s+", " ").trim();
+        return oneLine.length() <= MAX_ERROR_BODY_LENGTH
+                ? oneLine
+                : oneLine.substring(0, MAX_ERROR_BODY_LENGTH) + "…";
+    }
+
+    /**
+     * 构造 JSON-RPC 错误响应。用 Jackson 而非字符串拼接：响应体里可能含引号/换行/反斜杠，
+     * 手拼会产出非法 JSON，调用方解析失败后只剩一句"parse error"，比原问题更难查。
+     */
+    private static String errorJson(int status, String body) {
+        ObjectNode error = JSON.createObjectNode();
+        error.put(JSONRPC, JSONRPC_VERSION);
+        error.put(JSONRPC_ID, -1);
+        ObjectNode detail = error.putObject(JSONRPC_ERROR);
+        detail.put("code", -32000);
+        detail.put("message", "HTTP " + status + (body == null || body.isBlank() ? "" : ": " + abbreviate(body)));
+        return error.toString();
     }
 
     @Override
@@ -277,8 +307,11 @@ public class StreamableHttpTransport implements McpTransportClient {
 
             int status = response.statusCode();
             if (status >= 400) {
-                log.debug("MCP POST returned status {} - may not support Streamable HTTP", status);
-                return "{\"error\":{\"code\":-32000,\"message\":\"HTTP " + status + "\"}}";
+                // 把响应体一并带出：MCP Server 的鉴权/参数错误说明就在这里（例如
+                // 「缺少 Authorization: Bearer <服务令牌>」）。原先只回 "HTTP 401"，
+                // 会让「本侧登记漏配 authConfig」与「下游拒绝」之间彻底断线。
+                log.warn("MCP POST returned status {} body={}", status, abbreviate(response.body()));
+                return errorJson(status, response.body());
             }
 
             String respBody = response.body();
@@ -338,18 +371,6 @@ public class StreamableHttpTransport implements McpTransportClient {
     }
 
     private void applyAuth(HttpRequest.Builder builder) {
-        if (authConfigJson == null || authConfigJson.isBlank()) return;
-        try {
-            JsonNode auth = JSON.readTree(authConfigJson);
-            if (auth != null && auth.isObject()) {
-                Iterator<String> fields = auth.fieldNames();
-                while (fields.hasNext()) {
-                    String key = fields.next();
-                    builder.header(key, auth.get(key).asText());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to parse authConfig JSON, ignoring: {}", authConfigJson);
-        }
+        authHeaders.forEach(builder::header);
     }
 }

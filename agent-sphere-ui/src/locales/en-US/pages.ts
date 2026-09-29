@@ -125,6 +125,9 @@ export default {
   'pages.capabilities.mcp.argsInvalid': 'Arguments are not valid JSON',
   'pages.capabilities.mcp.testSuccess': 'Connected, found {count} tools',
   'pages.capabilities.mcp.serverUrlInvalid': 'Must start with http:// or https://',
+  'pages.capabilities.mcp.authConfig': 'Auth Headers (JSON)',
+  'pages.capabilities.mcp.authConfigPlaceholder':
+    '{"Authorization":"Bearer <token>"}',
   'pages.capabilities.commandTemplate': 'Command Template',
   'pages.capabilities.paramSchema': 'Parameter Schema (JSON)',
   'pages.capabilities.responseSchema': 'Response Schema (JSON)',

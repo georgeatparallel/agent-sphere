@@ -123,6 +123,9 @@ export default {
   'pages.capabilities.mcp.argsInvalid': '参数不是合法 JSON',
   'pages.capabilities.mcp.testSuccess': '连接成功，发现 {count} 个工具',
   'pages.capabilities.mcp.serverUrlInvalid': '以 http:// 或 https:// 开头',
+  'pages.capabilities.mcp.authConfig': '认证 Header (JSON)',
+  'pages.capabilities.mcp.authConfigPlaceholder':
+    '{"Authorization":"Bearer <token>"}',
   'pages.capabilities.commandTemplate': '命令模板',
   'pages.capabilities.paramSchema': '参数模式 (JSON)',
   'pages.capabilities.responseSchema': '响应模式 (JSON)',

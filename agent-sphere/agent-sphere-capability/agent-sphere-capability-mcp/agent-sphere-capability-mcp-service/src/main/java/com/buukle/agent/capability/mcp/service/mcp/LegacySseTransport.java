@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.buukle.agent.capability.mcp.service.mcp.McpProtocolConstants.*;
@@ -29,7 +30,8 @@ public class LegacySseTransport implements McpTransportClient {
 
     private final HttpClient httpClient;
     private final String sseUrl;
-    private final String authConfigJson;
+    /** 解析后的出站鉴权头；构造期一次性解析。 */
+    private final Map<String, String> authHeaders;
     private final Duration connectTimeout;
     private final Duration sseInitTimeout;
     private final Duration sseReadTimeout;
@@ -53,8 +55,22 @@ public class LegacySseTransport implements McpTransportClient {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(connectTimeout)
                 .build();
-        this.authConfigJson = authConfig;
+        this.authHeaders = McpAuthHeaders.parse(authConfig);
         this.sseUrl = serverUrl.endsWith("/") ? serverUrl + "sse" : serverUrl + DEFAULT_SSE_PATH;
+    }
+
+
+    /** 单个响应体片段的最大长度，避免把整页 HTML 塞进错误消息。 */
+    private static final int MAX_ERROR_BODY_LENGTH = 300;
+
+    private static String abbreviate(String body) {
+        if (body == null || body.isBlank()) {
+            return "<empty>";
+        }
+        String oneLine = body.replaceAll("\\s+", " ").trim();
+        return oneLine.length() <= MAX_ERROR_BODY_LENGTH
+                ? oneLine
+                : oneLine.substring(0, MAX_ERROR_BODY_LENGTH) + "…";
     }
 
     @Override
@@ -238,8 +254,9 @@ public class LegacySseTransport implements McpTransportClient {
             HttpResponse<String> response = httpClient.send(builder.build(),
                     HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() >= 400) {
+                // 同 Streamable：带上响应体，鉴权/参数错误说明都在里面。
                 throw new BizException(CapabilityMcpErrorCode.MCP_EXECUTE_FAILED,
-                        "Legacy SSE POST returned " + response.statusCode());
+                        "Legacy SSE POST returned " + response.statusCode() + ": " + abbreviate(response.body()));
             }
             return response.body();
         } catch (BizException e) {
@@ -260,18 +277,6 @@ public class LegacySseTransport implements McpTransportClient {
     }
 
     private void applyAuth(HttpRequest.Builder builder) {
-        if (authConfigJson == null || authConfigJson.isBlank()) return;
-        try {
-            JsonNode auth = JSON.readTree(authConfigJson);
-            if (auth != null && auth.isObject()) {
-                Iterator<String> fields = auth.fieldNames();
-                while (fields.hasNext()) {
-                    String key = fields.next();
-                    builder.header(key, auth.get(key).asText());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to parse authConfig JSON, ignoring: {}", authConfigJson);
-        }
+        authHeaders.forEach(builder::header);
     }
 }
