@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.buukle.agent.capability.mcp.domain.CapabilityMcp;
 import com.buukle.agent.capability.mcp.dtvo.dto.CreateMcpDTO;
+import com.buukle.agent.capability.mcp.dtvo.vo.McpTestResultVO;
 import com.buukle.agent.capability.mcp.dtvo.vo.McpToolInfoVO;
 import com.buukle.agent.capability.mcp.dtvo.vo.McpVO;
 import com.buukle.agent.capability.mcp.exception.CapabilityMcpErrorCode;
@@ -33,6 +34,8 @@ public class CapabilityMcpServiceImpl extends ServiceImpl<McpMapper, CapabilityM
     private static final String DIRECT_HTTP_HINT = "No MCP found for serverUrl={}, using direct HTTP call";
     private static final String HEADER_CONTENT_TYPE = "Content-Type";
     private static final String APPLICATION_JSON = "application/json";
+    private static final String HTTP_PREFIX = "http://";
+    private static final String HTTPS_PREFIX = "https://";
 
     private final CapabilityMcpConverter capabilityMcpConverter;
     private final McpTransportFactory mcpTransportFactory;
@@ -50,6 +53,7 @@ public class CapabilityMcpServiceImpl extends ServiceImpl<McpMapper, CapabilityM
 
     @Override
     public McpVO createMcp(CreateMcpDTO dto) {
+        validateServerUrl(dto.getServerUrl());
         CapabilityMcp mcp = capabilityMcpConverter.toDO(dto);
         save(mcp);
         return capabilityMcpConverter.toVO(mcp);
@@ -94,6 +98,7 @@ public class CapabilityMcpServiceImpl extends ServiceImpl<McpMapper, CapabilityM
 
     @Override
     public McpVO updateMcp(Long id, CreateMcpDTO dto) {
+        validateServerUrl(dto.getServerUrl());
         CapabilityMcp mcp = capabilityMcpConverter.toDO(dto);
         mcp.setId(id);
         updateById(mcp);
@@ -123,9 +128,49 @@ public class CapabilityMcpServiceImpl extends ServiceImpl<McpMapper, CapabilityM
             McpTransportClient client = mcpTransportFactory.getOrCreateClient(
                     mcpId, mcp.getServerUrl(), mcp.getServerType(), mcp.getAuthConfig());
             return client.listTools();
+        } catch (BizException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to list MCP tools for mcpId={}: {}", mcpId, e.getMessage());
-            return List.of();
+            throw new BizException(CapabilityMcpErrorCode.MCP_LIST_TOOLS_FAILED, e.getMessage());
+        }
+    }
+
+    @Override
+    public McpTestResultVO testConnection(Long mcpId) {
+        McpVO mcp = getMcp(mcpId);
+        try {
+            McpTransportClient client = mcpTransportFactory.getOrCreateClient(
+                    mcpId, mcp.getServerUrl(), mcp.getServerType(), mcp.getAuthConfig());
+            List<McpToolInfoVO> tools = client.listTools();
+            return McpTestResultVO.builder()
+                    .ok(true)
+                    .serverType(mcp.getServerType())
+                    .protocolVersion(client.negotiatedProtocolVersion())
+                    .toolCount(tools.size())
+                    .message("连接成功")
+                    .build();
+        } catch (BizException e) {
+            log.error("MCP connect test failed for mcpId={}: {}", mcpId, e.getMessage());
+            throw new BizException(CapabilityMcpErrorCode.MCP_CONNECT_TEST_FAILED, e.getMessage());
+        } catch (Exception e) {
+            log.error("MCP connect test failed for mcpId={}", mcpId, e);
+            throw new BizException(CapabilityMcpErrorCode.MCP_CONNECT_TEST_FAILED, e.getMessage());
+        }
+    }
+
+    @Override
+    public String callToolByMcpId(Long mcpId, String toolName, String argumentsJson) {
+        McpVO mcp = getMcp(mcpId);
+        try {
+            McpTransportClient client = mcpTransportFactory.getOrCreateClient(
+                    mcpId, mcp.getServerUrl(), mcp.getServerType(), mcp.getAuthConfig());
+            return client.callTool(toolName, argumentsJson);
+        } catch (BizException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("MCP tool call failed for mcpId={}, tool={}: {}", mcpId, toolName, e.getMessage());
+            throw new BizException(CapabilityMcpErrorCode.MCP_EXECUTE_FAILED, e.getMessage());
         }
     }
 
@@ -195,7 +240,22 @@ public class CapabilityMcpServiceImpl extends ServiceImpl<McpMapper, CapabilityM
             throw e;
         } catch (Exception e) {
             log.error("MCP direct HTTP call failed: serverUrl={}, toolName={}", serverUrl, toolName, e);
-            throw new BizException(CapabilityMcpErrorCode.MCP_EXECUTE_FAILED);
+            throw new BizException(CapabilityMcpErrorCode.MCP_EXECUTE_FAILED, e.getMessage());
+        }
+    }
+
+    /**
+     * serverUrl 必须为 http/https 开头，否则 MCP transport 的 URI.create 会因无 scheme
+     * 抛裸 IllegalArgumentException；这里在录入/更新时提前给出可读错误。
+     */
+    private void validateServerUrl(String serverUrl) {
+        if (serverUrl == null || serverUrl.isBlank()) {
+            throw new BizException(com.buukle.agent.common.error.CommonErrorCode.PARAM_INVALID, "serverUrl 不能为空");
+        }
+        String url = serverUrl.trim();
+        if (!url.startsWith(HTTP_PREFIX) && !url.startsWith(HTTPS_PREFIX)) {
+            throw new BizException(com.buukle.agent.common.error.CommonErrorCode.PARAM_INVALID,
+                    "serverUrl 需以 http:// 或 https:// 开头，当前: " + serverUrl);
         }
     }
 }

@@ -49,16 +49,21 @@ public class StreamableHttpTransport implements McpTransportClient {
 
     static String resolveEndpoint(String serverUrl, String serverType) {
         if (serverUrl == null || serverUrl.isBlank()) {
-            throw new IllegalArgumentException("serverUrl must not be empty");
+            throw new BizException(CapabilityMcpErrorCode.MCP_SERVER_UNREACHABLE, "MCP serverUrl 不能为空");
+        }
+        String trimmed = serverUrl.trim();
+        if (!trimmed.startsWith(SERVER_TYPE_HTTP + "://") && !trimmed.startsWith("https://")) {
+            throw new BizException(CapabilityMcpErrorCode.MCP_SERVER_UNREACHABLE,
+                    "MCP serverUrl 需以 http:// 或 https:// 开头，当前: " + serverUrl);
         }
         try {
-            URI uri = URI.create(serverUrl);
+            URI uri = URI.create(trimmed);
             String path = uri.getPath();
             String query = uri.getQuery();
             boolean hasCustomPath = path != null && !path.isEmpty() && !path.equals("/");
             boolean hasQuery = query != null && !query.isEmpty();
             if (hasCustomPath || hasQuery) {
-                return serverUrl;
+                return trimmed;
             }
         } catch (Exception e) {
             log.warn("Failed to parse serverUrl {}, falling back to default path", serverUrl);
@@ -210,6 +215,11 @@ public class StreamableHttpTransport implements McpTransportClient {
     @Override
     public boolean isConnected() {
         return initialized;
+    }
+
+    @Override
+    public String negotiatedProtocolVersion() {
+        return negotiatedProtocolVersion;
     }
 
     @Override

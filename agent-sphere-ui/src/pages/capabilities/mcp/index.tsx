@@ -3,17 +3,42 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
+  MoreOutlined,
   PlusOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { PageContainer, ProTable } from '@ant-design/pro-components';
 import { useIntl } from '@umijs/max';
-import { App, Button, DatePicker, Form, Input, Modal } from 'antd';
+import {
+  Alert,
+  App,
+  Button,
+  DatePicker,
+  Drawer,
+  Dropdown,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Tag,
+  Typography,
+} from 'antd';
 import type dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
 import { Can } from '@/components/Can';
 import { agentApi } from '@/services/agentSphere/api';
 import { formatParamDate, formatTime } from '@/utils/format';
 import { labelWithRule } from '@/utils/labelWithRule';
+
+const { Text } = Typography;
+
+interface McpTool {
+  name: string;
+  description?: string;
+  inputSchema?: string;
+}
 
 export default function McpList() {
   const { message, modal } = App.useApp();
@@ -30,6 +55,20 @@ export default function McpList() {
   const [tableScrollY, setTableScrollY] = useState(400);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [viewRecord, setViewRecord] = useState<any>(null);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [toolsLoading, setToolsLoading] = useState(false);
+  const [toolsError, setToolsError] = useState<string | null>(null);
+  const [toolsRecord, setToolsRecord] = useState<any>(null);
+  const [tools, setTools] = useState<McpTool[]>([]);
+  const [callToolState, setCallToolState] = useState<{
+    mcpId: number;
+    toolName: string;
+    args: string;
+    open: boolean;
+    loading: boolean;
+    result?: string;
+    error?: string;
+  }>({ mcpId: 0, toolName: '', args: '{}', open: false, loading: false });
 
   useEffect(() => {
     const calc = () => setTableScrollY(window.innerHeight - 280);
@@ -37,6 +76,89 @@ export default function McpList() {
     window.addEventListener('resize', calc);
     return () => window.removeEventListener('resize', calc);
   }, []);
+
+  const handleTestConnection = async (id: number) => {
+    try {
+      const res = await agentApi.mcp.test(id);
+      if (res?.ok) {
+        message.success(
+          intl.formatMessage(
+            {
+              id: 'pages.capabilities.mcp.testSuccess',
+              defaultMessage: '连接成功，发现 {count} 个工具',
+            },
+            { count: res.toolCount ?? 0 },
+          ),
+        );
+      } else {
+        message.error(
+          res?.message || intl.formatMessage({ id: 'pages.chat.saveFailed' }),
+        );
+      }
+    } catch (e: any) {
+      message.error(e?.message || '连接测试失败');
+    }
+  };
+
+  const openTools = async (record: any) => {
+    setToolsRecord(record);
+    setToolsOpen(true);
+    setTools([]);
+    setToolsError(null);
+    setToolsLoading(true);
+    try {
+      const res = await agentApi.mcp.listTools(record.id);
+      setTools(Array.isArray(res) ? res : []);
+    } catch (e: any) {
+      setToolsError(e?.message || '获取工具列表失败');
+    } finally {
+      setToolsLoading(false);
+    }
+  };
+
+  const openCallTool = (tool: McpTool) => {
+    setCallToolState({
+      mcpId: toolsRecord?.id,
+      toolName: tool.name,
+      args: tool.inputSchema && tool.inputSchema !== '{}' ? '{}' : '{}',
+      open: true,
+      loading: false,
+    });
+  };
+
+  const handleCallTool = async () => {
+    const { mcpId, toolName, args, loading } = callToolState;
+    if (loading) return;
+    let parsed: any = {};
+    try {
+      parsed = args?.trim() ? JSON.parse(args) : {};
+    } catch {
+      message.error(
+        intl.formatMessage({ id: 'pages.capabilities.mcp.argsInvalid' }),
+      );
+      return;
+    }
+    setCallToolState((s) => ({
+      ...s,
+      loading: true,
+      error: undefined,
+      result: undefined,
+    }));
+    try {
+      const res = await agentApi.mcp.callTool(mcpId, toolName, parsed);
+      setCallToolState((s) => ({
+        ...s,
+        loading: false,
+        result: typeof res === 'string' ? res : JSON.stringify(res, null, 2),
+      }));
+    } catch (e: any) {
+      setCallToolState((s) => ({
+        ...s,
+        loading: false,
+        error: e?.message || '工具调用失败',
+      }));
+    }
+  };
 
   const columns = [
     {
@@ -67,7 +189,7 @@ export default function McpList() {
     {
       title: intl.formatMessage({ id: 'pages.table.actions' }),
       key: 'actions',
-      width: 160,
+      width: 180,
       render: (_: any, record: any) => (
         <>
           <Button
@@ -121,6 +243,31 @@ export default function McpList() {
                 });
               }}
             />
+          </Can>
+          <Can code="capability:mcp:test">
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'test',
+                    label: intl.formatMessage({
+                      id: 'pages.capabilities.mcp.test',
+                    }),
+                    onClick: () => handleTestConnection(record.id),
+                  },
+                  {
+                    key: 'tools',
+                    label: intl.formatMessage({
+                      id: 'pages.capabilities.mcp.tools',
+                    }),
+                    onClick: () => openTools(record),
+                  },
+                ],
+              }}
+              trigger={['click']}
+            >
+              <Button type="link" size="small" icon={<MoreOutlined />} />
+            </Dropdown>
           </Can>
         </>
       ),
@@ -332,26 +479,39 @@ export default function McpList() {
               intl.formatMessage({ id: 'pages.capabilities.serverUrl' }),
               intl.formatMessage({ id: 'pages.hint.url' }),
             )}
-            rules={[{ required: true }]}
+            rules={[
+              { required: true },
+              {
+                validator: (_: any, value: any) => {
+                  if (!value || /^https?:\/\//i.test(String(value).trim())) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(
+                    new Error(
+                      intl.formatMessage({
+                        id: 'pages.capabilities.mcp.serverUrlInvalid',
+                        defaultMessage: '以 http:// 或 https:// 开头',
+                      }),
+                    ),
+                  );
+                },
+              },
+            ]}
           >
             <Input maxLength={500} />
           </Form.Item>
           <Form.Item
             name="serverType"
             label="Server Type"
-            initialValue="stdio"
+            initialValue="http"
             rules={[{ required: true }]}
           >
-            <Input maxLength={64} />
-          </Form.Item>
-          <Form.Item
-            name="toolDefinitions"
-            label={labelWithRule(
-              intl.formatMessage({ id: 'pages.capabilities.toolDefinitions' }),
-              intl.formatMessage({ id: 'pages.hint.text' }),
-            )}
-          >
-            <Input.TextArea rows={6} maxLength={5000} />
+            <Select
+              options={[
+                { value: 'http', label: 'http (Streamable HTTP)' },
+                { value: 'sse', label: 'sse (Legacy HTTP+SSE)' },
+              ]}
+            />
           </Form.Item>
         </Form>
       </Modal>
@@ -384,12 +544,6 @@ export default function McpList() {
                 value: viewRecord?.serverUrl || '-',
               },
               { label: 'Server Type', value: viewRecord?.serverType || '-' },
-              {
-                label: intl.formatMessage({
-                  id: 'pages.capabilities.toolDefinitions',
-                }),
-                value: viewRecord?.toolDefinitions || '-',
-              },
               {
                 label: intl.formatMessage({
                   id: 'pages.table.createdBy',
@@ -443,6 +597,155 @@ export default function McpList() {
             ))}
           </tbody>
         </table>
+      </Modal>
+      <Drawer
+        title={`${toolsRecord?.name || ''} — ${intl.formatMessage({
+          id: 'pages.capabilities.mcp.toolsTitle',
+          defaultMessage: '工具列表',
+        })}`}
+        open={toolsOpen}
+        onClose={() => setToolsOpen(false)}
+        width={680}
+      >
+        {toolsLoading ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            {intl.formatMessage({ id: 'pages.capabilities.mcp.toolsLoading' })}
+          </div>
+        ) : toolsError ? (
+          <Alert
+            type="error"
+            showIcon
+            message={intl.formatMessage({
+              id: 'pages.capabilities.mcp.toolsError',
+              defaultMessage: '获取工具列表失败',
+            })}
+            description={toolsError}
+            action={
+              <Button size="small" onClick={() => openTools(toolsRecord)}>
+                {intl.formatMessage({ id: 'pages.chat.retry' })}
+              </Button>
+            }
+          />
+        ) : tools.length === 0 ? (
+          <Empty description={intl.formatMessage({ id: 'pages.table.empty' })} />
+        ) : (
+          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            {tools.map((tool) => (
+              <div
+                key={tool.name}
+                style={{
+                  border: '1px solid #f0f0f0',
+                  borderRadius: 8,
+                  padding: '12px 14px',
+                }}
+              >
+                <Space
+                  style={{ width: '100%', justifyContent: 'space-between' }}
+                >
+                  <Tag color="blue">{tool.name}</Tag>
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<ThunderboltOutlined />}
+                    onClick={() => openCallTool(tool)}
+                  >
+                    {intl.formatMessage({
+                      id: 'pages.capabilities.mcp.tryCall',
+                      defaultMessage: '试调用',
+                    })}
+                  </Button>
+                </Space>
+                {tool.description && (
+                  <Text type="secondary" style={{ display: 'block' }}>
+                    {tool.description}
+                  </Text>
+                )}
+                {tool.inputSchema && tool.inputSchema !== '{}' && (
+                  <pre
+                    style={{
+                      marginTop: 8,
+                      maxHeight: 160,
+                      overflow: 'auto',
+                      fontSize: 12,
+                      background: 'rgba(0,0,0,0.03)',
+                      padding: 8,
+                      borderRadius: 6,
+                    }}
+                  >
+                    {(() => {
+                      try {
+                        return JSON.stringify(
+                          JSON.parse(tool.inputSchema || '{}'),
+                          null,
+                          2,
+                        );
+                      } catch {
+                        return tool.inputSchema;
+                      }
+                    })()}
+                  </pre>
+                )}
+              </div>
+            ))}
+          </Space>
+        )}
+      </Drawer>
+      <Modal
+        title={`${callToolState.toolName} — ${intl.formatMessage({
+          id: 'pages.capabilities.mcp.tryCallTitle',
+          defaultMessage: '试调用',
+        })}`}
+        open={callToolState.open}
+        onCancel={() =>
+          setCallToolState((s) => ({
+            ...s,
+            open: false,
+            result: undefined,
+            error: undefined,
+          }))
+        }
+        onOk={handleCallTool}
+        confirmLoading={callToolState.loading}
+        width={680}
+      >
+        <Form layout="vertical">
+          <Form.Item
+            label={intl.formatMessage({
+              id: 'pages.capabilities.mcp.args',
+              defaultMessage: '参数 (JSON)',
+            })}
+          >
+            <Input.TextArea
+              rows={6}
+              value={callToolState.args}
+              onChange={(e) =>
+                setCallToolState((s) => ({ ...s, args: e.target.value }))
+              }
+            />
+          </Form.Item>
+        </Form>
+        {callToolState.error && (
+          <Alert
+            type="error"
+            showIcon
+            message={callToolState.error}
+            style={{ marginBottom: 8 }}
+          />
+        )}
+        {callToolState.result !== undefined && (
+          <pre
+            style={{
+              maxHeight: 240,
+              overflow: 'auto',
+              fontSize: 12,
+              background: 'rgba(0,0,0,0.03)',
+              padding: 8,
+              borderRadius: 6,
+            }}
+          >
+            {callToolState.result}
+          </pre>
+        )}
       </Modal>
     </PageContainer>
   );

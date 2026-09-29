@@ -43,4 +43,11 @@ public interface McpTransportClient extends AutoCloseable {
      * Check if the client is still connected/initialized.
      */
     boolean isConnected();
+
+    /**
+     * 握手后协商的 MCP 协议版本；未初始化返回 null。
+     */
+    default String negotiatedProtocolVersion() {
+        return null;
+    }
 }

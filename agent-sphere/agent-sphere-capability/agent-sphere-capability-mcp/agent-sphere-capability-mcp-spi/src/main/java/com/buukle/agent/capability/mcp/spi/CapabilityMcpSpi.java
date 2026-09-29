@@ -2,6 +2,7 @@ package com.buukle.agent.capability.mcp.spi;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.buukle.agent.capability.mcp.dtvo.dto.CreateMcpDTO;
+import com.buukle.agent.capability.mcp.dtvo.vo.McpTestResultVO;
 import com.buukle.agent.capability.mcp.dtvo.vo.McpToolInfoVO;
 import com.buukle.agent.capability.mcp.dtvo.vo.McpVO;
 
@@ -47,4 +48,15 @@ public interface CapabilityMcpSpi {
     default List<McpToolInfoVO> listMcpTools(Long mcpId) {
         return List.of();
     }
+
+    /**
+     * 连接测试：对登记的服务端做 initialize 握手，返回可达性、协议版本与工具数。
+     */
+    McpTestResultVO testConnection(Long mcpId);
+
+    /**
+     * 按 mcpId 直接调用该 MCP 的某个工具（用于前端「试调用」）。
+     * serverUrl 版本见 {@link #executeTool(String, String, String)}。
+     */
+    String callToolByMcpId(Long mcpId, String toolName, String argumentsJson);
 }

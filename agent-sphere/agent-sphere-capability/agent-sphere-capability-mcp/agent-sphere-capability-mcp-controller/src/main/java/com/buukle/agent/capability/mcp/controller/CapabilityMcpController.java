@@ -65,4 +65,28 @@ public class CapabilityMcpController extends BaseController {
         capabilityMcpService.batchDeleteMcp(ids);
         return ok();
     }
+
+    @RequirePermission("capability:mcp:test")
+    @PostMapping("/{id}/test")
+    public ResponseEntity<?> testConnection(@PathVariable Long id) {
+        return ok(capabilityMcpService.testConnection(id));
+    }
+
+    @RequirePermission("capability:mcp:test")
+    @GetMapping("/{id}/tools")
+    public ResponseEntity<?> listTools(@PathVariable Long id) {
+        return ok(capabilityMcpService.listMcpTools(id));
+    }
+
+    @RequirePermission("capability:mcp:test")
+    @PostMapping("/{id}/tools/{toolName}/call")
+    public ResponseEntity<?> callTool(
+            @PathVariable Long id,
+            @PathVariable String toolName,
+            @RequestBody(required = false) java.util.Map<String, Object> body) {
+        String argumentsJson = body != null
+                ? com.buukle.agent.util.json.JsonUtils.toJson(body)
+                : null;
+        return ok(capabilityMcpService.callToolByMcpId(id, toolName, argumentsJson));
+    }
 }

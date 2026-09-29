@@ -39,6 +39,13 @@ public class LegacySseTransport implements McpTransportClient {
     private String postEndpointUrl;
 
     public LegacySseTransport(String serverUrl, String authConfig, AgentRuntimeProperties.McpConfig config) {
+        if (serverUrl == null || serverUrl.trim().isBlank()) {
+            throw new BizException(CapabilityMcpErrorCode.MCP_SERVER_UNREACHABLE, "MCP serverUrl 不能为空");
+        }
+        if (!serverUrl.trim().startsWith("http://") && !serverUrl.trim().startsWith("https://")) {
+            throw new BizException(CapabilityMcpErrorCode.MCP_SERVER_UNREACHABLE,
+                    "MCP serverUrl 需以 http:// 或 https:// 开头，当前: " + serverUrl);
+        }
         this.connectTimeout = config.getConnectTimeout();
         this.sseInitTimeout = config.getSseInitTimeout();
         this.sseReadTimeout = config.getSseReadTimeout();
@@ -123,6 +130,11 @@ public class LegacySseTransport implements McpTransportClient {
     @Override
     public boolean isConnected() {
         return initialized;
+    }
+
+    @Override
+    public String negotiatedProtocolVersion() {
+        return null;
     }
 
     @Override

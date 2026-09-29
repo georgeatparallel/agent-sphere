@@ -234,6 +234,15 @@ export const agentApi = {
       request<void>(`${BASE}/capability/mcp/${id}`, { method: 'DELETE' }),
     batchDelete: (ids: number[]) =>
       request<void>(`${BASE}/capability/mcp/batch`, { method: 'DELETE', data: ids }),
+    test: (id: number) =>
+      request<any>(`${BASE}/capability/mcp/${id}/test`, { method: 'POST' }),
+    listTools: (id: number) =>
+      request<any[]>(`${BASE}/capability/mcp/${id}/tools`),
+    callTool: (id: number, toolName: string, args?: any) =>
+      request<any>(`${BASE}/capability/mcp/${id}/tools/${toolName}/call`, {
+        method: 'POST',
+        data: args || {},
+      }),
   },
 
   skill: {
