@@ -97,13 +97,11 @@ export default function ChatMain({
     };
   }, [hasMessages]);
 
-  const hasPendingClarifications =
-    messages.some((m: any) =>
-      m.clarifications?.some((c: any) => c.status === 'pending'),
-    ) ||
-    timeline.some(
-      (r: any) => r.kind === 'clarification' && r.state === 'PENDING',
-    );
+  // 单一事实来源：澄清卡只渲染 timeline；messages 不再参与运行态锁定，
+  // 避免 messages 里残留的 pending 澄清把 Footer 永久锁在「执行中/停止」。
+  const hasPendingClarifications = timeline.some(
+    (r: any) => r.kind === 'clarification' && r.state === 'PENDING',
+  );
 
   const footerProps = {
     inputValue,

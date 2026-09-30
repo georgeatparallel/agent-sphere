@@ -139,6 +139,19 @@ public class ChatRuntimeService {
         AgentPendingClarification pending = clarificationMapper.selectOne(
                 query.last(ChatClarification.CLARIFYING_SQL_LIMIT));
         if (pending == null) {
+            // 幂等：澄清可能已被应答（重复提交）或 run 已推进。不再抛错，
+            // 否则前端重复提交被吞后拿不到终态，会永久卡在「执行中」。
+            AgentPendingClarification latest = clarificationMapper.selectOne(
+                    new LambdaQueryWrapper<AgentPendingClarification>()
+                            .eq(AgentPendingClarification::getRunId, runId)
+                            .orderByDesc(AgentPendingClarification::getCreatedAt)
+                            .last(ChatClarification.CLARIFYING_SQL_LIMIT));
+            if (latest != null && latest.getUserResponse() != null) {
+                ChatMessageResponseVO result = new ChatMessageResponseVO();
+                result.setRunId(runId);
+                result.setStatus(ChatConstant.RESPONSE_STATUS_PROCESSING);
+                return result;
+            }
             throw new BizException(CommonErrorCode.PARAM_INVALID, ChatClarification.CLARIFYING_ERROR_NOT_FOUND);
         }
         pending.setUserResponse(response);
@@ -203,8 +216,11 @@ public class ChatRuntimeService {
 
         RunVO active = runSpi.findActiveRun(sessionId);
         if (active == null) {
-            // 无活动 run：清除标志，避免误杀之后新发起的 run
+            // 无活动 run：清除标志，避免误杀之后新发起的 run；
+            // 但该 session 仍可能残留未应答澄清（run 已终态/被清扫），显式下发 dismissed，
+            // 否则前端会一直定格在待澄清/「执行中」。
             sessionRunner.clearSessionCancelled(sessionId);
+            dismissPendingClarifications(sessionId);
         } else if (RunStatus.AWAITING_USER.name().equals(active.getStatus())) {
             // 停车态：loop 已退出，标志不会生效 → 复用 stopRun 的澄清取消逻辑后清除标志
             stopRun(sessionId, active.getId());
@@ -250,6 +266,27 @@ public class ChatRuntimeService {
                             .setPublishId(RuntimeEventTypeConstant.PUBLISH_ID_RUN + runId)));
         } else {
             sessionRunner.cancelRun(runId);
+        }
+    }
+
+    /**
+     * 无活动 run 时兜底下发该 session 未应答澄清的 dismissed 事件：
+     * run 可能已终态/被清扫，但澄清行仍停留在 PENDING，会让前端锁在「执行中」。
+     */
+    private void dismissPendingClarifications(Long sessionId) {
+        List<AgentPendingClarification> pendingList = clarificationMapper.selectList(
+                new LambdaQueryWrapper<AgentPendingClarification>()
+                        .eq(AgentPendingClarification::getSessionId, sessionId)
+                        .isNull(AgentPendingClarification::getUserResponse));
+        for (AgentPendingClarification pending : pendingList) {
+            pending.setUserResponse(ChatClarification.CLARIFICATION_RESPONSE_DISMISSED);
+            clarificationMapper.updateById(pending);
+            eventPublisher.publishEvent(new RuntimeEventVO(
+                    ClarificationStatus.DISMISSED,
+                    new RuntimeEventDataVO()
+                            .setSessionId(sessionId)
+                            .setRunId(pending.getRunId())
+                            .setClarificationId(pending.getClarificationId())));
         }
     }
 

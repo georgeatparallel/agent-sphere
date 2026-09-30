@@ -90,6 +90,8 @@ export default function Chat() {
   const currentRunIdRef = useRef<number | null>(null);
   const stopFallbackRef = useRef<number | null>(null);
   const pendingMsgConsumedRef = useRef(false);
+  // 已本地应答的澄清（按 runId）：防止随后 refreshLatest 用服务端旧 PENDING 覆盖乐观态
+  const answeredClarificationsRef = useRef<Set<string>>(new Set());
 
   const loadSessions = useCallback(async (offset: number) => {
     try {
@@ -164,37 +166,7 @@ export default function Chat() {
             ts: toTs(r.createdAt),
           });
         }
-        const hasClarifications =
-          !!r.clarifications && r.clarifications.length > 0;
-        if (hasClarifications) {
-          const clarifications = r.clarifications
-            ? r.clarifications.map((c: any) => ({
-                clarificationId: c.clarificationId,
-                runId: c.runId,
-                sessionId: c.sessionId,
-                title: c.title,
-                type: c.type,
-                options: c.options
-                  ? (() => {
-                      try {
-                        return JSON.parse(c.options);
-                      } catch {
-                        return [];
-                      }
-                    })()
-                  : [],
-                status: c.status,
-                userResponse: c.userResponse,
-              }))
-            : [];
-          historyMsgs.push({
-            role: 'ai',
-            content: r.assistantReply || '',
-            runId: r.id,
-            ts: toTs(r.createdAt),
-            clarifications,
-          });
-        }
+        // 澄清不再写入 messages：澄清卡由 timeline 渲染，messages 仅保留用户气泡。
       }
       if (page === 1) {
         setMessages(historyMsgs);
@@ -203,6 +175,40 @@ export default function Chat() {
       }
     } catch {}
   }, []);
+
+  // 按 runId（可选 clarificationId）就地更新 timeline 澄清行状态
+  const applyClarificationState = (
+    rows: any[],
+    d: any,
+    state: string,
+    response?: string,
+  ) =>
+    rows.map((r) => {
+      if (r.kind !== 'clarification') return r;
+      if (Number(r.runId) !== Number(d?.runId)) return r;
+      if (
+        d?.clarificationId != null &&
+        r.content?.clarificationId != null &&
+        String(r.content.clarificationId) !== String(d.clarificationId)
+      ) {
+        return r;
+      }
+      return {
+        ...r,
+        state,
+        content: { ...r.content, ...(response != null ? { response } : {}) },
+      };
+    });
+
+  // 本地立即解除所有 PENDING 澄清（停止/取消时秒解锁，不等 SSE 回来）
+  const cancelPendingClarificationsLocally = () =>
+    setTimeline((prev) =>
+      prev.map((r) =>
+        r.kind === 'clarification' && r.state === 'PENDING'
+          ? { ...r, state: 'CANCELLED' }
+          : r,
+      ),
+    );
 
   const mergeTimeline = (rows: any[]) => {
     if (!Array.isArray(rows)) return;
@@ -224,7 +230,16 @@ export default function Chat() {
               }
             }
           }
-          m.set(r.seq, { ...(m.get(r.seq) || {}), ...r });
+          const incoming = { ...(m.get(r.seq) || {}), ...r };
+          // 已本地应答的澄清不被服务端旧 PENDING 回退
+          if (
+            incoming.kind === 'clarification' &&
+            incoming.state === 'PENDING' &&
+            answeredClarificationsRef.current.has(String(incoming.runId))
+          ) {
+            incoming.state = 'ANSWERED';
+          }
+          m.set(r.seq, incoming);
         }
       }
       return [...m.values()].sort((a, b) => a.seq - b.seq);
@@ -321,32 +336,31 @@ export default function Chat() {
     if (currentSession?.id) void refreshSessionUsage(currentSession.id);
   }, [currentSession?.id]);
 
-  const handleTimelineClarify = (row: any, response: string) => {
+  const handleTimelineClarify = async (row: any, response: string) => {
     if (!currentSession?.id || !row?.runId) return;
-    agentApi.sessions
-      .clarify(currentSession.id, row.runId, response, row.clarificationId)
-      .catch(() => {});
-    // 乐观回显：立即将澄清行置为已应答并显示用户提交内容。
-    // 以 runId 为主匹配键（clarificationId 可能缺失/经 wrapReasoning 丢失），保证能命中。
-    if (row.runId != null) {
-      setTimeline((prev) =>
-        prev.map((r) => {
-          if (
-            r.kind === 'clarification' &&
-            Number(r.runId) === Number(row.runId) &&
-            (row.clarificationId == null ||
-              r.content?.clarificationId == null ||
-              String(r.content.clarificationId) === String(row.clarificationId))
-          ) {
-            return {
-              ...r,
-              state: 'ANSWERED',
-              content: { ...r.content, response },
-            };
-          }
-          return r;
-        }),
+    // 先记为已应答，防止随后的 refreshLatest 用服务端旧 PENDING 覆盖乐观态
+    answeredClarificationsRef.current.add(String(row.runId));
+    // 乐观回显：立即将澄清行置为已应答并显示用户提交内容（以 runId 为主匹配键）
+    setTimeline((prev) =>
+      applyClarificationState(
+        prev,
+        { runId: row.runId, clarificationId: row.clarificationId },
+        'ANSWERED',
+        response,
+      ),
+    );
+    try {
+      await agentApi.sessions.clarify(
+        currentSession.id,
+        row.runId,
+        response,
+        row.clarificationId,
       );
+    } catch (e: any) {
+      // 提交失败（重复提交/澄清已失效）：撤销本地应答并拉取权威状态，避免卡死
+      answeredClarificationsRef.current.delete(String(row.runId));
+      message.error(e?.message || '澄清提交失败，请重试');
+      void refreshLatest(currentSession.id);
     }
   };
 
@@ -508,6 +522,10 @@ export default function Chat() {
 
   const connectSSE = useCallback((sid: number) => {
     if (abortRef.current) abortRef.current.abort();
+    // 切会话时清空本地已应答标记（仅内存，避免跨会话误抑制刷新）
+    if (currentSessionIdRef.current !== sid) {
+      answeredClarificationsRef.current.clear();
+    }
     currentSessionIdRef.current = sid;
     setSseConnected(false);
     reconnectCountRef.current = 0;
@@ -585,6 +603,26 @@ export default function Chat() {
             const tlSubType = String(
               d?.reasoningSubType || d?.status || evtType,
             );
+
+            // run 运行态/终态：顶层兜底解锁/置位，不依赖 reasoning_token 信封，
+            // 避免终态事件以其他信封到达时 sending 永久卡住。
+            if (
+              tlSubType === 'run_completed' ||
+              tlSubType === 'run_failed' ||
+              tlSubType === 'run_cancelled' ||
+              tlSubType === 'run_awaiting_user'
+            ) {
+              setSending(false);
+              if (stopFallbackRef.current) {
+                clearTimeout(stopFallbackRef.current);
+                stopFallbackRef.current = null;
+              }
+            } else if (
+              tlSubType === 'run_running' ||
+              tlSubType === 'run_pending'
+            ) {
+              setSending(true);
+            }
 
             if (
               d?.seq != null &&
@@ -878,103 +916,21 @@ export default function Chat() {
               return;
             }
             if (evtType.startsWith('clarification_')) {
-              if (evtType === 'clarification_pending' && d?.runId) {
-                const opts = d.argumentsJson
-                  ? (() => {
-                      try {
-                        return JSON.parse(d.argumentsJson);
-                      } catch {
-                        return [];
-                      }
-                    })()
-                  : [];
-                const clarificationObj = {
-                  clarificationId: d.clarificationId,
-                  runId: d.runId,
-                  sessionId: d.sessionId,
-                  title: d.prompt || '',
-                  type: d.type || 'confirm',
-                  options: opts,
-                  status: 'pending' as const,
-                };
-                setMessages((prev) => {
-                  const idx = prev.findIndex(
-                    (m: any) => m.role === 'ai' && m.runId === d.runId,
-                  );
-                  if (idx >= 0) {
-                    return prev.map((m, i) =>
-                      i === idx
-                        ? {
-                            ...m,
-                            clarifications: [
-                              ...((m as any).clarifications || []).filter(
-                                (c: any) =>
-                                  c.clarificationId !== d.clarificationId,
-                              ),
-                              clarificationObj,
-                            ],
-                            _pending: false,
-                          }
-                        : m,
-                    );
-                  }
-                  return [
-                    ...prev,
-                    {
-                      role: 'ai',
-                      content: '',
-                      runId: d.runId,
-                      ts: Date.now(),
-                      clarifications: [clarificationObj],
-                      _pending: false,
-                    },
-                  ];
-                });
-              }
               if (evtType === 'clarification_responded') {
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    (m as any).runId === d?.runId
-                      ? {
-                          ...m,
-                          clarifications: ((m as any).clarifications || []).map(
-                            (c: any) =>
-                              c.clarificationId === d.clarificationId
-                                ? {
-                                    ...c,
-                                    status: 'responded',
-                                    userResponse: d.response,
-                                  }
-                                : c,
-                          ),
-                        }
-                      : m,
-                  ),
-                );
-                // 兜底：Timeline 澄清行同步置为已应答并回显用户提交内容（按 runId 匹配，clarificationId 缺失时仍命中）
+                // 记为已应答：防止随后 refreshLatest 用服务端旧 PENDING 覆盖乐观态
+                answeredClarificationsRef.current.add(String(d?.runId));
                 setTimeline((prev) =>
-                  prev.map((r) => {
-                    if (
-                      r.kind === 'clarification' &&
-                      Number(r.runId) === Number(d?.runId) &&
-                      (d?.clarificationId == null ||
-                        r.content?.clarificationId == null ||
-                        String(r.content.clarificationId) ===
-                          String(d.clarificationId))
-                    ) {
-                      return {
-                        ...r,
-                        state: 'ANSWERED',
-                        content: {
-                          ...r.content,
-                          response: d?.response ?? r.content.response,
-                        },
-                      };
-                    }
-                    return r;
-                  }),
+                  applyClarificationState(prev, d, 'ANSWERED', d?.response),
+                );
+              } else if (
+                evtType === 'clarification_dismissed' ||
+                evtType === 'clarification_expired'
+              ) {
+                setTimeline((prev) =>
+                  applyClarificationState(prev, d, 'CANCELLED'),
                 );
               }
+              // clarification_pending 不写 messages：澄清卡由 refreshLatest 渲染的 timeline 行承载
               return;
             }
             if (evtType === 'content_token') {
@@ -1174,6 +1130,17 @@ export default function Chat() {
         agentApi.runs
           .stop(currentSession.id, clarification.runId)
           .catch(() => {});
+        // 立即本地解除该澄清行（不等 SSE），并把发送态复位
+        setTimeline((prev) =>
+          applyClarificationState(
+            prev,
+            {
+              runId: clarification.runId,
+              clarificationId: clarification.clarificationId,
+            },
+            'CANCELLED',
+          ),
+        );
         setSending(false);
       }
     },
@@ -1187,19 +1154,21 @@ export default function Chat() {
       return;
     }
 
-    // Auto-cancel any pending clarifications before sending a new message
-    for (const m of messages) {
-      const clarifications = (m as any).clarifications;
-      if (clarifications) {
-        for (const c of clarifications) {
-          if (c.status === 'pending') {
-            agentApi.sessions
-              .clarify(c.sessionId, c.runId, '__cancel__', c.clarificationId)
-              .catch(() => {});
-          }
-        }
-      }
+    // 发送新消息前先取消 timeline 上仍 PENDING 的澄清（card 的唯一渲染源）
+    const pendingRows = timeline.filter(
+      (r: any) => r.kind === 'clarification' && r.state === 'PENDING',
+    );
+    for (const r of pendingRows) {
+      agentApi.sessions
+        .clarify(
+          currentSession.id,
+          r.runId,
+          '__cancel__',
+          r.content?.clarificationId,
+        )
+        .catch(() => {});
     }
+    if (pendingRows.length > 0) cancelPendingClarificationsLocally();
 
     setMessages((prev) => [
       ...prev,
@@ -1387,8 +1356,26 @@ export default function Chat() {
               sending={sending}
               onSendMessage={sendMessage}
               onCancelSend={() => {
-                // 不乐观解锁：保持 sending=true（按钮维持停止态），等待该 run 的终态事件再恢复；
-                // 8s 兜底强制恢复，避免后端未发布终态事件时卡死
+                // 先取消 timeline 上仍 PENDING 的澄清（澄清卡的唯一渲染源），
+                // 并立即本地解锁——避免 messages 残留 pending 导致「停止无反应」。
+                const pendingRows = timeline.filter(
+                  (r: any) =>
+                    r.kind === 'clarification' && r.state === 'PENDING',
+                );
+                for (const r of pendingRows) {
+                  if (currentSession?.id) {
+                    agentApi.sessions
+                      .clarify(
+                        currentSession.id,
+                        r.runId,
+                        '__cancel__',
+                        r.content?.clarificationId,
+                      )
+                      .catch(() => {});
+                  }
+                }
+                cancelPendingClarificationsLocally();
+                // sending 不乐观解锁：等该 run 终态事件恢复；8s 兜底防后端未发终态
                 if (stopFallbackRef.current) {
                   clearTimeout(stopFallbackRef.current);
                 }
@@ -1396,24 +1383,6 @@ export default function Chat() {
                   stopFallbackRef.current = null;
                   setSending(false);
                 }, 8000);
-                // Cancel any pending clarifications
-                for (const m of messages) {
-                  const clarifications = (m as any).clarifications;
-                  if (clarifications) {
-                    for (const c of clarifications) {
-                      if (c.status === 'pending') {
-                        agentApi.sessions
-                          .clarify(
-                            c.sessionId,
-                            c.runId,
-                            '__cancel__',
-                            c.clarificationId,
-                          )
-                          .catch(() => {});
-                      }
-                    }
-                  }
-                }
                 if (currentSession?.id) {
                   agentApi.runs
                     .sessionStop(currentSession.id)

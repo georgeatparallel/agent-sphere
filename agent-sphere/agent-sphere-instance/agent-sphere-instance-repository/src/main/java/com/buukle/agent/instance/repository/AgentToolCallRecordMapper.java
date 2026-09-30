@@ -48,7 +48,7 @@ public interface AgentToolCallRecordMapper extends BaseMapper<AgentToolCallRecor
               WHERE run_id = #{runId} AND delete_flag = 0
               UNION ALL
               SELECT id, 'tool_call', created_at, session_id,
-                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                     NULL, NULL, NULL, NULL, NULL, NULL,
                      NULL, NULL, NULL,
                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                      step_id, tool_name, display_name_cn, display_name_en, arguments_json, artifact, status, error_message
