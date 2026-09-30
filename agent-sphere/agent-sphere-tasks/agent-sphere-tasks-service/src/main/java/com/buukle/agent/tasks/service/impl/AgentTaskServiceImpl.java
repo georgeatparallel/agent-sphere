@@ -64,8 +64,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AgentTaskServiceImpl implements AgentTaskService {
 
-    private static final long MAX_POLL_SECONDS = 60 * 60; // 60 分钟兜底
     private static final int MAX_TITLE_LENGTH = 60;
+    /**
+     * 任务输出了 mcpCredential 时，凭证在 Redis 的存活时间 = 任务超时 + 该余量。
+     *
+     * <p>必须 **大于** 业务方签发 JWT 时自己加的余量（约定 5 分钟），否则会出现
+     * 「Redis 先于 JWT 过期」—— 表现为报「缺少凭证」而不是「凭证过期」，极难排查。
+     */
+    private static final Duration CREDENTIAL_TTL_MARGIN = Duration.ofMinutes(15);
     private static final String MSG_AUTONOMOUS_HEADER = "\n【自主任务模式】这是一个后台自动执行的任务：禁止向用户提问、请求澄清或确认任何内容；信息不足时基于已有上下文做合理假设并继续完成。\n";
     private static final String MSG_TASK_CONFIG_HEADER = "\n\n【任务配置】请严格依据以下配置执行任务：\n";
     private static final String MSG_EXPECTED_OUTPUT_HEADER = "\n\n【期望输出】请严格按以下 JSON Schema 返回最终结果（只输出符合 schema 的 JSON，不要额外说明）：\n";
@@ -96,6 +102,13 @@ public class AgentTaskServiceImpl implements AgentTaskService {
     @Value("${hri-ai.tasks.poll-interval:2s}")
     private Duration pollInterval;
 
+    /**
+     * 任务超时兜底（秒）：业务方未指定 {@code taskTimeoutSeconds} 时使用（存量任务该列也为 NULL）。
+     * 业务方指定时以业务方为准，被 task_timeout_seconds 列覆盖。
+     */
+    @Value("${hri-ai.tasks.max-poll-seconds:3600}")
+    private long defaultMaxPollSeconds;
+
     @Override
     public TaskVO submit(CreateTaskDTO dto, CallerAuth auth) {
         ResolvedIdentityVO identity = resolveIdentity(auth);
@@ -111,6 +124,8 @@ public class AgentTaskServiceImpl implements AgentTaskService {
         task.setExpectedOutputJson(dto.getExpectedOutput() == null ? null : JsonUtils.toJson(dto.getExpectedOutput()));
         task.setConfig(dto.getConfig() == null ? null : JsonUtils.toJson(dto.getConfig()));
         task.setCallbackUrl(dto.getCallbackUrl());
+        // 与业务方签发的 MCP 凭证 TTL 共用同一个数（见 CreateTaskDTO#taskTimeoutSeconds）
+        task.setTaskTimeoutSeconds(dto.getTaskTimeoutSeconds());
         task.setCreatedBy(identity.getUsername());
         task.setInstanceId(instance.getId());
         task.setStatus(TaskEnum.STATUS_QUEUED);
@@ -124,7 +139,9 @@ public class AgentTaskServiceImpl implements AgentTaskService {
 
             // 必须在 chat 之前登记：工具调用发生在 run 执行过程中，晚一步登记会导致
             // 首个 MCP 调用就拿不到凭证（表现为「第一个候选人没查重，后面的都查了」）。
-            taskMcpCredentialStore.put(session.getId(), dto.getMcpCredential());
+            // TTL 按任务实际超时 + 余量：不能再用固定值，否则长任务（最长 4h）会先于任务过期。
+            taskMcpCredentialStore.put(session.getId(), dto.getMcpCredential(),
+                    CREDENTIAL_TTL_MARGIN.plusSeconds(effectiveTimeoutSeconds(dto.getTaskTimeoutSeconds())));
 
             SendMessageDTO message = new SendMessageDTO();
             message.setMessage(buildPrompt(dto));
@@ -429,11 +446,17 @@ public class AgentTaskServiceImpl implements AgentTaskService {
         return updated > 0;
     }
 
+    /** 任务超时秒数：业务方指定则以其为准，否则回落到 AS 侧配置默认值（存量任务该列 NULL）。 */
+    long effectiveTimeoutSeconds(Integer taskTimeoutSeconds) {
+        return taskTimeoutSeconds != null ? taskTimeoutSeconds : defaultMaxPollSeconds;
+    }
+
     /** 单任务一轮轮询：超时/run 终态/阶段推进。 */
     private void pollOnce(AgentTask task) {
         Long taskId = task.getId();
+        long timeoutSeconds = effectiveTimeoutSeconds(task.getTaskTimeoutSeconds());
         if (task.getStartedAt() != null
-                && Duration.between(task.getStartedAt(), LocalDateTime.now()).toMillis() > MAX_POLL_SECONDS * 1000) {
+                && Duration.between(task.getStartedAt(), LocalDateTime.now()).toMillis() > timeoutSeconds * 1000) {
             markTerminal(taskId, TaskEnum.STATUS_FAILED,
                     JsonUtils.toJson(Map.of("error", "task poll timeout")));
             return;

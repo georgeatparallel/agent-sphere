@@ -62,6 +62,20 @@ class TaskMcpCredentialStoreTest {
         verify(bucket).set("cred-token", TaskMcpCredentialStore.DEFAULT_TTL);
     }
 
+    /**
+     * 任务链路按「任务超时 + 余量」传入 TTL；若被忽略退回固定 2h，长任务（上限 4h）
+     * 会出现「任务还在跑、Redis 里的凭证先没了」。
+     */
+    @Test
+    void put_withExplicitTtl_usesThatTtl() {
+        when(redissonClient.<String>getBucket(KEY)).thenReturn(bucket);
+        java.time.Duration ttl = java.time.Duration.ofMinutes(20);
+
+        store.put(SESSION_ID, "cred-token", ttl);
+
+        verify(bucket).set("cred-token", ttl);
+    }
+
     @Test
     void put_blankCredentialIsNoOp() {
         store.put(SESSION_ID, "   ");

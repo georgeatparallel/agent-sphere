@@ -30,6 +30,8 @@ public class AgentTask {
     private LocalDateTime polledAt;
     /** 任务开始时间（超时兜底基准）。 */
     private LocalDateTime startedAt;
+    /** 任务超时时间（秒）；为空时由 AS 侧配置兜底。业务方（Bole）传入则以业务方为准。 */
+    private Integer taskTimeoutSeconds;
     private String remark;
     private String callbackUrl;
     @TableLogic

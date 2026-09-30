@@ -1,6 +1,8 @@
 package com.buukle.agent.tasks.dtvo;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -39,4 +41,17 @@ public class CreateTaskDTO implements Serializable {
      */
     @Size(max = 4096)
     private String mcpCredential;
+
+    /**
+     * 任务超时时间（秒）。业务方（Bole）指定则以其为准；不传则由 AS 侧配置兜底。
+     *
+     * <p>该值同时决定两件事：AS 侧任务的存活上限（超时判 FAILED），以及业务方据它签发的
+     * MCP 凭证有效期 —— 两者必须一致，否则会出现「任务还在跑但凭证已过期」。
+     *
+     * <p>上限 4 小时：它既决定凭证有效期、也决定任务占用资源的时长，属安全敏感参数，
+     * 越界直接 400（由 GlobalExceptionHandler 把 MethodArgumentNotValidException 映射为 400）。
+     */
+    @Min(60)
+    @Max(14400)
+    private Integer taskTimeoutSeconds;
 }

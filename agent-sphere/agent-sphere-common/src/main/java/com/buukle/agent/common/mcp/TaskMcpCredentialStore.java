@@ -27,7 +27,7 @@ import java.time.Duration;
 @Component
 public class TaskMcpCredentialStore {
 
-    /** 默认 TTL：与 Bole 侧凭证有效期同量级，留出余量覆盖长任务。 */
+    /** 默认 TTL：调用方未显式指定时使用（任务链路会按「任务超时 + 余量」传入，见 AgentTaskServiceImpl）。 */
     public static final Duration DEFAULT_TTL = Duration.ofHours(2);
 
     private static final String KEY_PREFIX = "runtime:mcp:task-cred:";
@@ -38,13 +38,23 @@ public class TaskMcpCredentialStore {
         this.redissonClient = redissonClient;
     }
 
-    /** 提交任务时登记凭证。凭证为空表示该任务不需要 MCP 凭证，直接跳过。 */
+    /** 提交任务时登记凭证，使用 {@link #DEFAULT_TTL}。凭证为空表示该任务不需要 MCP 凭证，直接跳过。 */
     public void put(Long sessionId, String credential) {
+        put(sessionId, credential, DEFAULT_TTL);
+    }
+
+    /**
+     * 提交任务时按指定 TTL 登记凭证。
+     *
+     * <p>任务链路的 TTL 必须 ≥ 业务方为同一任务签发的 JWT 有效期：Redis 先过期会退化成
+     * 报「缺少凭证」（而非「凭证过期」），结论失真且极难排查。调用方务必留足余量。
+     */
+    public void put(Long sessionId, String credential, Duration ttl) {
         if (sessionId == null || credential == null || credential.isBlank()) {
             return;
         }
         try {
-            bucket(sessionId).set(credential, DEFAULT_TTL);
+            bucket(sessionId).set(credential, ttl != null ? ttl : DEFAULT_TTL);
         } catch (Exception e) {
             // 登记失败不能阻断任务（寻访本身仍能跑完），但**必须大声报错**：
             // 凭证没写进去 = 后续所有 MCP 调用都会因"缺少凭证"被拒，而下游报错离本侧根因很远。

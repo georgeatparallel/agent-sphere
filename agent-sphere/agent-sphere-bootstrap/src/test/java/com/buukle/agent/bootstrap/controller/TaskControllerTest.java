@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -60,6 +61,24 @@ class TaskControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1L));
+    }
+
+    @Test
+    void submit_withOutOfRangeTimeout_returns400() throws Exception {
+        CreateTaskDTO dto = new CreateTaskDTO();
+        dto.setGoal("梳理 4 月订单");
+        dto.setCode("bole");
+        dto.setSubject("elvin");
+        dto.setBusinessType("sourcing");
+        dto.setTaskTimeoutSeconds(10); // 低于 @Min(60)
+
+        mockMvc.perform(post("/api/v1/api/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+
+        // 越界值连服务层都不该进：超时是安全敏感参数（同时决定凭证有效期）。
+        verifyNoInteractions(taskService);
     }
 
     @Test

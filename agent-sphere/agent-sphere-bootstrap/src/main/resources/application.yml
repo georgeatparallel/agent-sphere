@@ -219,6 +219,7 @@ hri-ai:
     call-timeout: 60s                              # 单次 completions 调用超时 / Completions call timeout
   tasks:
     poll-interval: 2s                              # task 状态轮询间隔 / Task poll interval
+    max-poll-seconds: 3600                         # 任务超时兜底秒数（业务方未指定时）/ Fallback task timeout seconds when caller omits it
     callback:
       max-attempts: 3                              # 终态回调最大尝试次数 / Task callback max attempts
       initial-delay: 2s                            # 回调退避初始间隔 / Task callback retry initial delay
