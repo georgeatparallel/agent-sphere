@@ -56,6 +56,12 @@ PostgreSQL (DB name `buukle_agent_2026061101`) + Redis. `docker-compose.yml` liv
 
 Env overrides (defaults): `DB_HOST` (127.0.0.1), `DB_PORT` (5432), `DB_USERNAME` (buukle), `DB_PASSWORD` (buukle123), `REDIS_HOST` (127.0.0.1), `REDIS_PORT` (6379).
 
+**Redis access must go through Redisson** (`RedisClient` bean in `infrastructure/config/RedisConfig`, inject `RedissonClient` or reuse `CacheService`). Do **not** use Spring Data Redis (`StringRedisTemplate` / `RedisTemplate`):
+
+- the connection config lives under the **legacy prefix** `spring.redis.host/port` and is read only by that hand-written `@Value` config;
+- Spring Data Redis auto-configuration only binds `spring.data.redis.*` (Boot 3 renamed it), so with only the legacy prefix it **silently falls back to `localhost:6379`** — there is no Redis in the pod, so every read/write fails;
+- this once made task-level MCP credentials never get written, surfacing far away as the downstream error `缺少 X-Task-Mcp-Credential`, while the real failure was hidden in a `warn` log.
+
 ## Flyway
 
 Migrations: `agent-sphere-bootstrap/src/main/resources/db/migration/V<n>__desc.sql` (currently V1–V5; check the directory for the current highest number before adding a new one). `baseline-on-migrate: true`, baseline 0. Add new `V<n>` files; never edit applied migrations.

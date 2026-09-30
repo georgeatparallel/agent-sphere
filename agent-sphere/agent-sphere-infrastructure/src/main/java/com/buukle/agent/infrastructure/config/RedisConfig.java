@@ -8,13 +8,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 public class RedisConfig {
+
+    /*
+     * 注意：本项目的 Redis 访问统一走 Redisson（见下），不要引入 Spring Data Redis 的
+     * StringRedisTemplate / RedisTemplate。
+     *
+     * 原因：本类的连接配置读的是 spring.redis.host/port（旧前缀，靠 @Value 显式读取），
+     * 而 Spring Data Redis 的自动装配只认 spring.data.redis.*（Boot 3 已迁移）。
+     * 在只配了旧前缀的情况下，自动装配会静默回落到 localhost:6379 —— 容器里没有本机 Redis，
+     * 于是读写全部失败。曾因此导致任务级 MCP 凭证从未写入，且失败被降级成 warn 而难以定位。
+     */
 
     @Value("${spring.redis.host:localhost}")
     private String redisHost;
@@ -46,16 +52,5 @@ public class RedisConfig {
             config.setCodec(codec);
         }
         return Redisson.create(config);
-    }
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new Jackson2JsonRedisSerializer<>(Object.class));
-        return template;
     }
 }
