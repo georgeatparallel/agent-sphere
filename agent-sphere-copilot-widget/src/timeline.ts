@@ -16,6 +16,7 @@ export const EMPTY_CURSORS: TimelineCursors = { oldestSeq: null, newestSeq: null
 export function mergeTimeline(
   prev: TimelineRow[],
   rows: TimelineRow[],
+  answeredRunIds?: Set<string>,
 ): TimelineRow[] {
   if (rows.length === 0) {
     return prev;
@@ -43,7 +44,18 @@ export function mergeTimeline(
         }
       }
     }
-    map.set(r.seq, r);
+    let incoming = r;
+    // 已本地应答的澄清：服务端旧 PENDING 不得回退乐观态
+    if (
+      answeredRunIds &&
+      r.kind === 'clarification' &&
+      r.state === 'PENDING' &&
+      r.runId != null &&
+      answeredRunIds.has(String(r.runId))
+    ) {
+      incoming = { ...r, state: 'ANSWERED' };
+    }
+    map.set(incoming.seq, incoming);
   }
   return [...map.values()].sort((a, b) => a.seq - b.seq);
 }

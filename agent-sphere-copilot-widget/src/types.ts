@@ -17,6 +17,15 @@ export interface SsoIdentityVO {
   subject?: string;
 }
 
+/** token 用量（tooltip / 会话吸底条共用）。 */
+export interface UsageData {
+  promptTokens?: number | null;
+  completionTokens?: number | null;
+  totalTokens?: number | null;
+  cacheHitTokens?: number | null;
+  cacheMissTokens?: number | null;
+}
+
 export interface InstanceVO {
   id: number;
   name: string;
@@ -101,6 +110,16 @@ export interface TimelineRow {
     modelName?: string;
     /** 用户消息附图（[{fileKey, contentType}]，按 fileKey 拉字节回显）。 */
     images?: { fileKey: string; contentType?: string }[];
+    /** 用量（assistant / run_status 行）。 */
+    usage?: {
+      promptTokens?: number | null;
+      completionTokens?: number | null;
+      totalTokens?: number | null;
+      cacheHitTokens?: number | null;
+      cacheMissTokens?: number | null;
+    } | null;
+    /** 同批次并行子 Agent 共享的分组键（工具调用 id），用于并行 Tab 分组。 */
+    parentToolCallId?: string | null;
     [key: string]: unknown;
   };
 }

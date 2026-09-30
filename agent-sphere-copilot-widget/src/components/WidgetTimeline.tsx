@@ -3,6 +3,9 @@ import type { ReactNode } from 'react';
 import { Markdown } from '../markdown';
 import { CheckIcon, CopyIcon } from '../icons';
 import { stripSubAgentMarkerPrefix } from '../subAgentMarker';
+import { browserResult, isBrowserTool, toolFamily } from '../toolRenderers';
+import { DocCard, GenericCard, TodoCard } from './ToolCard';
+import UsageChip from './Usage';
 import type { SubAgentTimelineItemVO, TimelineRow } from '../types';
 import type { SubAgentLiveMap } from '../useTimelineStream';
 
@@ -18,6 +21,8 @@ export interface WidgetTimelineProps {
   /** 按 fileKey 拉附件字节转 objectURL（用户消息图片回显）。 */
   loadFile: (fileKey: string) => Promise<string>;
   onRespondClarify: (runId: number, clarificationId: string, response: string) => void;
+  /** 取消当前会话待处理澄清（停止 run）。 */
+  onCancelClarify?: () => void;
 }
 
 // ---------------------------------------------------------------- utils
@@ -124,12 +129,20 @@ function AssistantRow({ row }: { row: TimelineRow }) {
   const reply = c.reply || '';
   const [thinkingOpen, setThinkingOpen] = useState(true);
   const [autoCollapsed, setAutoCollapsed] = useState(false);
+  const thinkBoxRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!autoCollapsed && reply.trim().length > 0) {
       setAutoCollapsed(true);
       setThinkingOpen(false);
     }
   }, [reply, autoCollapsed]);
+  // 思考流式增长时贴底滚动
+  useEffect(() => {
+    const el = thinkBoxRef.current;
+    if (thinkingOpen && el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [thinking, thinkingOpen]);
   return (
     <div>
       <div>
@@ -142,7 +155,9 @@ function AssistantRow({ row }: { row: TimelineRow }) {
         </button>
       </div>
       {thinkingOpen && (
-        <div className="aw-tl-thinking">{thinking || '（无推理内容）'}</div>
+        <div ref={thinkBoxRef} className="aw-tl-thinking">
+          {thinking || '（无推理内容）'}
+        </div>
       )}
       <div className="aw-tl-reply">
         {reply ? (
@@ -151,6 +166,7 @@ function AssistantRow({ row }: { row: TimelineRow }) {
           <span style={{ color: '#9ca3af' }}>（流式中…）</span>
         )}
         <CopyBtn text={reply} />
+        <UsageChip usage={c.usage ?? undefined} />
       </div>
     </div>
   );
@@ -164,32 +180,44 @@ function ToolRow({
   loadFile: (fileKey: string) => Promise<string>;
 }) {
   const c = row.content || {};
-  const [open, setOpen] = useState(false);
+  const family = toolFamily(c, c.displayName);
+  const name = c.displayName || row.title || 'tool';
+  const isBrowser = isBrowserTool(c, c.displayName);
+  const brow = browserResult(c, c.displayName);
+  const stateLabel = brow.failed
+    ? brow.errorCategory === 'timeout'
+      ? 'timeout'
+      : 'failed'
+    : undefined;
+  // doc 卡自带 📄 标题行，避免与头部重复
+  const hideHead = family === 'doc';
   return (
     <div>
-      <div className="aw-tl-tool-head">
-        <span style={{ opacity: 0.7 }}>🛠️</span>
-        <TypographyStrong>{c.displayName || row.title || 'tool'}</TypographyStrong>
-        <StateTag state={row.state} />
-      </div>
+      {!hideHead && (
+        <div className="aw-tl-tool-head">
+          <span style={{ opacity: 0.7 }}>🛠️</span>
+          <TypographyStrong>{name}</TypographyStrong>
+          {family !== 'todo' &&
+            (stateLabel ? (
+              <span className="aw-tool-failed">✕ {stateLabel}</span>
+            ) : (
+              <StateTag state={row.state} />
+            ))}
+        </div>
+      )}
       {Array.isArray(c.images) && c.images.length > 0 && (
         <UserImages images={c.images} loadFile={loadFile} />
       )}
-      <div>
-        <button
-          type="button"
-          className="aw-tl-detail-toggle"
-          onClick={() => setOpen((o) => !o)}
-        >
-          {open ? '▾' : '▸'} 详情
-        </button>
-        {open && (
-          <div>
-            {c.args && <pre className="aw-tl-pre">{prettyJson(c.args)}</pre>}
-            {c.artifact && <pre className="aw-tl-pre">{c.artifact}</pre>}
-          </div>
-        )}
-      </div>
+      {family === 'todo' ? (
+        <TodoCard content={c} />
+      ) : family === 'doc' ? (
+        <DocCard content={c} />
+      ) : (
+        <GenericCard
+          content={{ ...c, displayName: name }}
+          hideJson={isBrowser}
+        />
+      )}
     </div>
   );
 }
@@ -203,9 +231,11 @@ function TypographyStrong({ children }: { children: ReactNode }) {
 function ClarifyRow({
   row,
   onRespondClarify,
+  onCancelClarify,
 }: {
   row: TimelineRow;
   onRespondClarify: (runId: number, clarificationId: string, response: string) => void;
+  onCancelClarify?: () => void;
 }) {
   const c = row.content || {};
   const [text, setText] = useState('');
@@ -259,6 +289,14 @@ function ClarifyRow({
               onClick={() => respond(text)}
             >
               提交
+            </button>
+            <button
+              type="button"
+              className="aw-clarify-submit"
+              style={{ background: '#fff', color: '#8c8c8c' }}
+              onClick={() => onCancelClarify?.()}
+            >
+              取消
             </button>
           </div>
         </div>
@@ -348,7 +386,7 @@ function SubAgentToolItem({
           {s.argumentsJson ? (
             <pre className="aw-tl-pre">{prettyJson(s.argumentsJson)}</pre>
           ) : null}
-          {s.artifact ? <pre className="aw-tl-pre">{s.artifact}</pre> : null}
+          {s.artifact ? <pre className="aw-tl-pre">{prettyJson(s.artifact)}</pre> : null}
           {s.toolErrorMessage ? (
             <div style={{ fontSize: 11, color: '#cf1322' }}>{s.toolErrorMessage}</div>
           ) : null}
@@ -507,42 +545,47 @@ function UserImages({
   loadFile: (fileKey: string) => Promise<string>;
 }) {
   const [urls, setUrls] = useState<Record<string, string>>({});
-  const currentUrlsRef = useRef<Record<string, string>>({});
+  // loadFile 经 ref 读取：不进入 effect 依赖，避免上层内联函数身份变化引发无限重取
+  const loadFileRef = useRef(loadFile);
+  loadFileRef.current = loadFile;
   const imagesKey = (images || [])
     .map((im) => im.fileKey || '')
     .join(',');
   useEffect(() => {
-    // 按 fileKey 集合变化响应式重取：权威行替换乐观行时迟到补上的 images 也能加载
+    // 仅按 fileKey 集合变化响应式重取（objectURL 缓存由 fileCache 统一持有，组件不再 revoke）
     const list = (images || []).filter((im) => im.fileKey);
     if (list.length === 0) return;
     let alive = true;
-    const next: Record<string, string> = {};
     Promise.all(
       list.map(async (im) => {
         try {
-          next[im.fileKey] = await loadFile(im.fileKey);
+          return [im.fileKey, await loadFileRef.current(im.fileKey)] as const;
         } catch (err) {
           console.warn('[widget] load image failed', im.fileKey, err);
+          return [im.fileKey, ''] as const;
         }
       }),
-    ).then(() => {
+    ).then((entries) => {
       if (!alive) return;
-      // 新 URL 就绪后再释放旧 URL，避免短暂渲染破损图
-      Object.values(currentUrlsRef.current).forEach((u) => {
-        try {
-          URL.revokeObjectURL(u);
-        } catch {
-          /* 忽略 */
+      const next: Record<string, string> = {};
+      for (const [key, url] of entries) {
+        if (url) next[key] = url;
+      }
+      // 内容不变则不 setState，避免无谓重渲染
+      setUrls((prev) => {
+        const pk = Object.keys(prev);
+        const nk = Object.keys(next);
+        if (pk.length === nk.length && nk.every((k) => prev[k] === next[k])) {
+          return prev;
         }
+        return next;
       });
-      currentUrlsRef.current = next;
-      setUrls(next);
     });
     return () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [imagesKey, loadFile]);
+  }, [imagesKey]);
   const list = (images || []).filter((im) => im.fileKey && urls[im.fileKey]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   if (list.length === 0) return null;
@@ -576,12 +619,14 @@ function RowView({
   loadSubAgentSteps,
   loadFile,
   onRespondClarify,
+  onCancelClarify,
 }: {
   row: TimelineRow;
   subAgentLiveMap: SubAgentLiveMap;
   loadSubAgentSteps: (subAgentRunId: number) => Promise<SubAgentTimelineItemVO[]>;
   loadFile: (fileKey: string) => Promise<string>;
   onRespondClarify: (runId: number, clarificationId: string, response: string) => void;
+  onCancelClarify?: () => void;
 }) {
   const c = row.content || {};
   const isUser = row.kind === 'user';
@@ -589,13 +634,25 @@ function RowView({
 
   if (row.kind === 'run_status') {
     const duration = formatDuration(c.durationMs);
-    const parts = [c.text || row.title, duration, c.modelName].filter(
+    const rawText = String(c.text || row.title || '');
+    // 剥离后端状态前缀（❌/⏹️/⏸️），失败用红叉表示
+    const text = rawText.replace(/^[❌⏹️⏸️]\s*/u, '');
+    const parts = [text, duration, c.modelName].filter(
       (p): p is string => !!p,
     );
+    const failed =
+      /fail|失败|错误/i.test(text) || String(row.state) === 'FAILED';
     return (
       <div className="aw-tl-divider">
-        {row.state === 'RUNNING' ? <span className="aw-running-dot" /> : <span>•</span>}
-        {parts.join(' · ') || row.title}
+        {row.state === 'RUNNING' ? (
+          <span className="aw-running-dot" />
+        ) : failed ? (
+          <span style={{ color: '#ff4d4f' }}>✕</span>
+        ) : (
+          <span>•</span>
+        )}
+        <span>{parts.join(' · ') || text}</span>
+        <UsageChip usage={c.usage ?? undefined} />
       </div>
     );
   }
@@ -614,7 +671,13 @@ function RowView({
       case 'tool':
         return <ToolRow row={row} loadFile={loadFile} />;
       case 'clarification':
-        return <ClarifyRow row={row} onRespondClarify={onRespondClarify} />;
+        return (
+          <ClarifyRow
+            row={row}
+            onRespondClarify={onRespondClarify}
+            onCancelClarify={onCancelClarify}
+          />
+        );
       case 'subagent':
         return (
           <SubAgentCard
@@ -651,6 +714,45 @@ function RowView({
   );
 }
 
+/** 并行子 Agent：同一 parentToolCallId 的多个 subagent 行合并为横向 Tab。 */
+function ParallelSubAgentTabs({
+  members,
+  subAgentLiveMap,
+  loadSubAgentSteps,
+  loadFile,
+}: {
+  members: TimelineRow[];
+  subAgentLiveMap: SubAgentLiveMap;
+  loadSubAgentSteps: (subAgentRunId: number) => Promise<SubAgentTimelineItemVO[]>;
+  loadFile: (fileKey: string) => Promise<string>;
+}) {
+  const [active, setActive] = useState(0);
+  const idx = Math.min(active, members.length - 1);
+  return (
+    <div className="aw-subagent-tabs">
+      <div className="aw-subagent-tabbar">
+        {members.map((m, i) => (
+          <button
+            key={m.seq}
+            type="button"
+            className={`aw-subagent-tab${i === idx ? ' active' : ''}`}
+            onClick={() => setActive(i)}
+          >
+            {stripSubAgentMarkerPrefix(m.content?.displayName || m.title) ||
+              `Agent ${i + 1}`}
+          </button>
+        ))}
+      </div>
+      <SubAgentCard
+        row={members[idx]}
+        subAgentLiveMap={subAgentLiveMap}
+        loadSubAgentSteps={loadSubAgentSteps}
+        loadFile={loadFile}
+      />
+    </div>
+  );
+}
+
 export function WidgetTimeline({
   rows,
   hasMore,
@@ -661,7 +763,62 @@ export function WidgetTimeline({
   loadSubAgentSteps,
   loadFile,
   onRespondClarify,
+  onCancelClarify,
 }: WidgetTimelineProps) {
+  // 同一 parentToolCallId 的多个 subagent 行（≥2）合并为并行 Tab
+  const items = useMemo(() => {
+    const groups = new Map<string, TimelineRow[]>();
+    for (const r of rows) {
+      if (r.kind !== 'subagent') continue;
+      const pid = r.content?.parentToolCallId;
+      if (pid == null || pid === '') continue;
+      const k = String(pid);
+      const arr = groups.get(k) ?? [];
+      arr.push(r);
+      groups.set(k, arr);
+    }
+    const multi = new Set<string>();
+    for (const [k, v] of groups) {
+      if (v.length >= 2) multi.add(k);
+    }
+    const emitted = new Set<string>();
+    const out: ReactNode[] = [];
+    for (const row of rows) {
+      const pid = row.kind === 'subagent' ? row.content?.parentToolCallId : null;
+      const k = pid != null && pid !== '' ? String(pid) : '';
+      if (k && multi.has(k)) {
+        if (emitted.has(k)) continue;
+        emitted.add(k);
+        out.push(
+          <div key={`grp-${k}`} className="aw-tl-row">
+            <ParallelSubAgentTabs
+              members={groups.get(k)!}
+              subAgentLiveMap={subAgentLiveMap}
+              loadSubAgentSteps={loadSubAgentSteps}
+              loadFile={loadFile}
+            />
+          </div>,
+        );
+        continue;
+      }
+      const key =
+        row.seq < 0 ? `p-${row.refSubAgentRunId ?? 'x'}` : String(row.seq);
+      out.push(
+        <div key={key} className="aw-tl-row">
+          <RowView
+            row={row}
+            subAgentLiveMap={subAgentLiveMap}
+            loadSubAgentSteps={loadSubAgentSteps}
+            loadFile={loadFile}
+            onRespondClarify={onRespondClarify}
+            onCancelClarify={onCancelClarify}
+          />
+        </div>,
+      );
+    }
+    return out;
+  }, [rows, subAgentLiveMap, loadSubAgentSteps, loadFile, onRespondClarify, onCancelClarify]);
+
   return (
     <div className="aw-tl">
       {hasMore ? (
@@ -678,24 +835,7 @@ export function WidgetTimeline({
         <div className="aw-tl-empty">（暂无消息）</div>
       ) : (
         <>
-          {rows.map((row) => (
-            <div
-              key={
-                row.seq < 0
-                  ? `p-${row.refSubAgentRunId ?? 'x'}`
-                  : String(row.seq)
-              }
-              className="aw-tl-row"
-            >
-              <RowView
-                row={row}
-                subAgentLiveMap={subAgentLiveMap}
-                loadSubAgentSteps={loadSubAgentSteps}
-                loadFile={loadFile}
-                onRespondClarify={onRespondClarify}
-              />
-            </div>
-          ))}
+          {items}
           {pendingUserRows.map((row) => (
             <div key={`local-${row.seq}`} className="aw-tl-row">
               <RowView
@@ -704,6 +844,7 @@ export function WidgetTimeline({
                 loadSubAgentSteps={loadSubAgentSteps}
                 loadFile={loadFile}
                 onRespondClarify={onRespondClarify}
+                onCancelClarify={onCancelClarify}
               />
             </div>
           ))}

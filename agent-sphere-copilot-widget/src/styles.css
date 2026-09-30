@@ -825,6 +825,86 @@
   margin-top: 4px;
 }
 
+.aw-tool-summary {
+  color: #8c8c8c;
+  font-size: 12px;
+  margin-top: 4px;
+  word-break: break-word;
+}
+
+.aw-tool-failed {
+  color: #ff4d4f;
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.aw-tool-block {
+  margin-top: 4px;
+}
+
+.aw-tool-todo-progress {
+  color: #8c8c8c;
+  font-size: 11px;
+  margin: 4px 0;
+}
+
+.aw-tool-todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  color: #595959;
+  padding: 2px 0;
+}
+
+.aw-tool-todo-check {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin-top: 1px;
+  border: 1px solid #d9d9d9;
+  border-radius: 3px;
+  line-height: 12px;
+  text-align: center;
+  font-size: 10px;
+  color: #fff;
+}
+
+.aw-tool-todo-check.done {
+  background: #52c41a;
+  border-color: #52c41a;
+}
+
+.aw-tool-todo-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+.aw-tool-todo-text.done {
+  color: #bfbfbf;
+  text-decoration: line-through;
+}
+
+.aw-tool-todo-pri {
+  flex: none;
+  color: #ff4d4f;
+  font-size: 10px;
+  border: 1px solid #ffccc7;
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.aw-tool-doc {
+  color: #595959;
+  font-size: 12px;
+}
+
+.aw-tool-doc-preview {
+  color: #8c8c8c;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
 .aw-tl-divider {
   display: flex;
   align-items: center;
@@ -851,6 +931,58 @@
 }
 
 /* ---- 子 Agent 卡片 ---- */
+.aw-usage-chip {
+  margin-left: auto;
+  color: #9ca3af;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.aw-session-usage {
+  position: sticky;
+  bottom: 6px;
+  align-self: center;
+  margin: 6px auto 2px;
+  width: fit-content;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.aw-subagent-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aw-subagent-tabbar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.aw-subagent-tab {
+  border: 1px solid #e6edf5;
+  background: #fff;
+  color: #595959;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.aw-subagent-tab.active {
+  background: #1677ff;
+  border-color: #1677ff;
+  color: #fff;
+}
+
 .aw-subagent {
   background: #f4f7fb;
   border: 1px solid #e6edf5;

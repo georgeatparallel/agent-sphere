@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { UIEvent } from 'react';
 import { ApiError, createApi, stopSession } from '../api';
+import { clearFileCache } from '../fileCache';
 import type { WidgetConfig } from '../config';
-import type { InstanceVO, SessionVO, UserVO } from '../types';
+import type { InstanceVO, SessionVO, UsageData, UserVO } from '../types';
 import { useTimelineStream } from '../useTimelineStream';
 import { PictureIcon, SendIcon, StopIcon } from '../icons';
 import { WidgetTimeline } from './WidgetTimeline';
+import { cacheHitRate, formatTokens } from './Usage';
 
 const AGENT_PAGE_SIZE = 5;
 const SESSION_PAGE_SIZE = 5;
@@ -45,6 +47,8 @@ export function CopilotView({ config, user }: CopilotViewProps) {
     [config.apiBase, config.provider],
   );
   const apiBase = config.apiBase ?? '/api/v1';
+  // 稳定引用：避免每次渲染都新建函数导致 UserImages effect 反复触发
+  const loadFile = useCallback((fileKey: string) => api.loadFile(fileKey), [api]);
 
   // 新 timeline 数据通道（REST + SSE）
   const timeline = useTimelineStream(api);
@@ -82,7 +86,41 @@ export function CopilotView({ config, user }: CopilotViewProps) {
     previewUrl: string;
   } | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [sessionUsage, setSessionUsage] = useState<UsageData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const attachmentRef = useRef(attachment);
+  attachmentRef.current = attachment;
+
+  /** 释放当前附件预览 objectURL 并清空附件（发送 / 移除 / 替换时调用）。 */
+  const discardAttachment = useCallback(() => {
+    setAttachment((prev) => {
+      if (prev?.previewUrl) {
+        try {
+          URL.revokeObjectURL(prev.previewUrl);
+        } catch {
+          /* 忽略 */
+        }
+      }
+      return null;
+    });
+  }, []);
+
+  // 组件卸载：释放附件预览 objectURL 与文件 objectURL 缓存
+  useEffect(
+    () => () => {
+      const previewUrl = attachmentRef.current?.previewUrl;
+      if (previewUrl) {
+        try {
+          URL.revokeObjectURL(previewUrl);
+        } catch {
+          /* 忽略 */
+        }
+      }
+      clearFileCache();
+    },
+    [],
+  );
 
   useEffect(() => {
     const resolveUrl = async () => {
@@ -300,9 +338,31 @@ export function CopilotView({ config, user }: CopilotViewProps) {
     if (selectedSessionId === null) {
       return;
     }
+    // 切会话：释放上一会话的图片 objectURL 缓存
+    clearFileCache();
     timeline.connect(selectedSessionId, user.token, apiBase);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSessionId, user.token, apiBase]);
+
+  // 会话级用量：run 结束或切换会话时刷新（吸底条）
+  useEffect(() => {
+    if (selectedSessionId === null) {
+      setSessionUsage(null);
+      return;
+    }
+    if (timeline.runActive) return;
+    let alive = true;
+    api
+      .sessionUsage(selectedSessionId)
+      .then((u) => {
+        if (alive) setSessionUsage(u);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSessionId, timeline.runActive, api]);
 
   // 进入会话先滚到底一次；随后流式/刚发送时保持钉底（翻旧页 prepend 不动）
   const initialScrollDoneRef = useRef(false);
@@ -334,11 +394,13 @@ export function CopilotView({ config, user }: CopilotViewProps) {
       if (selectedSessionId === null) {
         return;
       }
+      // 乐观登记已应答，避免随后 refreshLatest 用服务端旧 PENDING 回退
+      timeline.markClarificationAnswered(runId);
       void api
         .clarify(selectedSessionId, runId, response, clarificationId)
         .catch((err) => setError((err as ApiError).message));
     },
-    [api, selectedSessionId],
+    [api, selectedSessionId, timeline],
   );
 
   const handlePickImage = () => {
@@ -361,6 +423,7 @@ export function CopilotView({ config, user }: CopilotViewProps) {
     try {
       setUploadingAttachment(true);
       const res = await api.uploadFile(file);
+      discardAttachment();
       setAttachment({
         fileKey: res.fileKey,
         contentType: res.contentType,
@@ -388,7 +451,7 @@ export function CopilotView({ config, user }: CopilotViewProps) {
       : undefined);
     const sentKeys = keys;
     const sentText = text;
-    setAttachment(null);
+    discardAttachment();
     try {
       await api.sendMessage(selectedSessionId, sentText, sentKeys);
       // POST 成功立即补拉权威行（用户行 + assistant 容器 + run 状态），无需等终态事件
@@ -701,9 +764,23 @@ export function CopilotView({ config, user }: CopilotViewProps) {
                 pendingUserRows={timeline.pendingUserRows}
                 subAgentLiveMap={timeline.subAgentLiveMap}
                 loadSubAgentSteps={timeline.loadSubAgentSteps}
-                loadFile={(fileKey) => api.loadFile(fileKey)}
+                loadFile={loadFile}
                 onRespondClarify={respondTimelineClarify}
+                onCancelClarify={() => {
+                  void handleStop();
+                }}
               />
+              {sessionUsage && Number(sessionUsage.totalTokens) > 0 ? (
+                <div className="aw-session-usage">
+                  ♨ 会话用量 · {formatTokens(sessionUsage.totalTokens)} tokens
+                  {sessionUsage.promptTokens
+                    ? ` · prompt ${formatTokens(sessionUsage.promptTokens)}`
+                    : ''}
+                  {cacheHitRate(sessionUsage) != null
+                    ? ` · cache ${cacheHitRate(sessionUsage)}%`
+                    : ''}
+                </div>
+              ) : null}
             </div>
             <div className="aw-chat-input">
               {runActive ? (
@@ -720,7 +797,7 @@ export function CopilotView({ config, user }: CopilotViewProps) {
                     className="aw-attach-remove"
                     title="移除图片"
                     aria-label="移除图片"
-                    onClick={() => setAttachment(null)}
+                    onClick={discardAttachment}
                   >
                     ✕
                   </button>

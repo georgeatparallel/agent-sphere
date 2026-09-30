@@ -1,4 +1,5 @@
 import { clearUser, getToken } from './auth';
+import { loadCachedObjectUrl } from './fileCache';
 import {
   SSO_AUTHORIZE_PATH,
   SSO_EXCHANGE_PATH,
@@ -10,6 +11,7 @@ import type {
   SessionVO,
   SsoIdentityVO,
   SubAgentTimelineItemVO,
+  UsageData,
   UserVO,
 } from './types';
 
@@ -80,22 +82,40 @@ async function request<T>(
   return (await response.json()) as T;
 }
 
-/** 按 fileKey 回读附件字节（聊天历史图片回显），转 objectURL 交给 <img> 渲染。 */
-export async function loadFileObjectUrl(
+/** 拉取附件字节（Bearer 鉴权，支持中止）。 */
+async function fetchFileBlob(
   base: string,
   fileKey: string,
-): Promise<string> {
+  signal?: AbortSignal,
+): Promise<Blob> {
   const token = getToken();
   const headers = new Headers();
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  const response = await fetch(buildUrl(base, `/files/${fileKey}`), { headers });
+  const response = await fetch(buildUrl(base, `/files/${fileKey}`), {
+    headers,
+    signal,
+  });
   if (!response.ok) {
     throw new ApiError(response.status, { message: response.statusText });
   }
-  const blob = await response.blob();
-  return URL.createObjectURL(blob);
+  return response.blob();
+}
+
+/**
+ * 按 fileKey 回读附件字节（聊天历史图片回显），转 objectURL 交给 <img> 渲染。
+ * 走 module 级缓存 + 并发去重（见 fileCache），避免重复下载与 objectURL 泄漏。
+ */
+export function loadFileObjectUrl(
+  base: string,
+  fileKey: string,
+): Promise<string> {
+  return loadCachedObjectUrl(
+    `${base}::${fileKey}`,
+    (_key, signal) => fetchFileBlob(base, fileKey, signal),
+    fileKey,
+  );
 }
 
 /** 上传聊天图片附件（FormData，Bearer 鉴权），返回 fileKey 供随消息发送。 */
@@ -214,6 +234,11 @@ export function stopSession(base: string, sessionId: number): Promise<void> {
   return request(base, `/runtime/${sessionId}/stop`, { method: 'POST' });
 }
 
+/** 会话级 token 用量（吸底条）。 */
+export function sessionUsage(base: string, sessionId: number): Promise<UsageData> {
+  return request<UsageData>(base, `/instance/sessions/${sessionId}/usage`);
+}
+
 export interface TimelineQuery {
   beforeSeq?: number;
   afterSeq?: number;
@@ -270,6 +295,7 @@ export interface ApiClient {
   closeSession: (id: number) => Promise<void>;
   publicConfig: (keys: string[]) => Promise<Record<string, string>>;
   stopSession: (sessionId: number) => Promise<void>;
+  sessionUsage: (sessionId: number) => Promise<UsageData>;
   listInstancesPage: (page?: number, size?: number) => Promise<InstancePageVO>;
   subAgentTimeline: (subAgentRunId: number) => Promise<SubAgentTimelineItemVO[]>;
   getTimeline: (sessionId: number, query?: TimelineQuery) => Promise<SessionTimelinePageVO>;
@@ -301,6 +327,7 @@ export function createApi(config: WidgetConfig): ApiClient {
     closeSession: (id) => closeSession(base, id),
     publicConfig: (keys) => publicConfig(base, keys),
     stopSession: (sessionId) => stopSession(base, sessionId),
+    sessionUsage: (sessionId) => sessionUsage(base, sessionId),
     listInstancesPage: (page, size) => listInstancesPage(base, page, size),
     subAgentTimeline: (subAgentRunId) => subAgentTimeline(base, subAgentRunId),
     getTimeline: (sessionId, query) => getTimeline(base, sessionId, query),

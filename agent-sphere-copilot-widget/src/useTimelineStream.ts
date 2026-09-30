@@ -92,6 +92,8 @@ interface TimelineStream {
   loadSubAgentSteps: (subAgentRunId: number) => Promise<SubAgentTimelineItemVO[]>;
   /** 建立会话 SSE 连接（会话切换时调用）；需传 apiBase 以构造正确的流地址（同源相对或跨域绝对）。 */
   connect: (sessionId: number, token: string, apiBase: string) => void;
+  /** 乐观提交澄清后登记已应答（防 refreshLatest 回退乐观态）。 */
+  markClarificationAnswered: (runId: number) => void;
 }
 
 /** 子 Agent LIVE 占位行 seq：负且按 subAgentRunId 唯一（避免同 seq 冲突）。 */
@@ -110,6 +112,10 @@ export function useTimelineStream(api: ApiClient): TimelineStream {
   const cursorsRef = useRef<TimelineCursors>({ oldestSeq: null, newestSeq: null });
   const sessionIdRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  /** 已本地应答的澄清 runId：防止 refreshLatest 用服务端旧 PENDING 回退乐观态。 */
+  const answeredRunIdsRef = useRef<Set<string>>(new Set());
+  const reconnectAttemptRef = useRef(0);
+  const reconnectTimerRef = useRef<number | null>(null);
 
   const getPage = useCallback(
     (sessionId: number) => (q: TimelineQuery) =>
@@ -206,7 +212,7 @@ export function useTimelineStream(api: ApiClient): TimelineStream {
           cursorsRef.current,
           8,
         );
-        setRows((prev) => mergeTimeline(prev, older));
+        setRows((prev) => mergeTimeline(prev, older, answeredRunIdsRef.current));
         setHasMore(m);
       } catch {
         // 翻页失败保持现状
@@ -225,7 +231,7 @@ export function useTimelineStream(api: ApiClient): TimelineStream {
           cursorsRef.current,
           10,
         );
-        setRows((prev) => mergeTimeline(prev, fresh));
+        setRows((prev) => mergeTimeline(prev, fresh, answeredRunIdsRef.current));
         reconcilePendingUserRows(fresh);
       } catch {
         // 补拉失败忽略（SSE 打字机仍会就地更新）
@@ -239,7 +245,7 @@ export function useTimelineStream(api: ApiClient): TimelineStream {
       try {
         const { rows: fresh } = await fetchTailTimeline(getPage(sessionId), 30);
         if (fresh.length) {
-          setRows((prev) => mergeTimeline(prev, fresh));
+          setRows((prev) => mergeTimeline(prev, fresh, answeredRunIdsRef.current));
           // 更新游标：尾窗视作权威最新，推动 afterSeq
           updateCursors(cursorsRef.current, {
             rows: fresh,
@@ -404,7 +410,11 @@ export function useTimelineStream(api: ApiClient): TimelineStream {
                 refSubAgentRunId: liveSubId,
                 state: 'RUNNING',
                 title: displayName,
-                content: { displayName, state: 'RUNNING' },
+                content: {
+                  displayName,
+                  state: 'RUNNING',
+                  parentToolCallId: d?.parentToolCallId ?? null,
+                },
               },
             ].sort((a, b) => a.seq - b.seq);
           });
@@ -462,6 +472,42 @@ export function useTimelineStream(api: ApiClient): TimelineStream {
         setRunActiveState(true);
       }
 
+      // 澄清：本地就地更新 + 记录已应答（防 refreshLatest 回退）
+      if (String(evtType).startsWith('clarification_')) {
+        if (evtType === 'clarification_responded') {
+          if (d?.runId != null) answeredRunIdsRef.current.add(String(d.runId));
+          setRows((prev) =>
+            prev.map((r) =>
+              r.kind === 'clarification' &&
+              Number(r.runId) === Number(d?.runId) &&
+              r.state === 'PENDING'
+                ? {
+                    ...r,
+                    state: 'ANSWERED',
+                    content: {
+                      ...r.content,
+                      response: d?.response ?? r.content.response,
+                    },
+                  }
+                : r,
+            ),
+          );
+        } else if (
+          evtType === 'clarification_dismissed' ||
+          evtType === 'clarification_expired'
+        ) {
+          setRows((prev) =>
+            prev.map((r) =>
+              r.kind === 'clarification' &&
+              Number(r.runId) === Number(d?.runId) &&
+              r.state === 'PENDING'
+                ? { ...r, state: 'CANCELLED' }
+                : r,
+            ),
+          );
+        }
+      }
+
       if (
         tlSubType === 'tool_call_succeeded' ||
         tlSubType === 'tool_call_failed'
@@ -478,30 +524,39 @@ export function useTimelineStream(api: ApiClient): TimelineStream {
     [handleSubAgentLiveEvent, refreshLatest, refreshTail],
   );
 
-  // 会话切换即重建：先断开旧流、清空状态；由 CopilotView 在选会话时调用 connect()。
-  const connect = useCallback(
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current != null) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
+
+  // 建立/重建会话 SSE；断线按指数退避重连（≤30s）；仅当仍是当前会话时重连。
+  const openStream = useCallback(
     (sessionId: number, token: string, apiBase: string) => {
       if (abortRef.current) abortRef.current.abort();
-      sessionIdRef.current = sessionId;
-      cursorsRef.current = { oldestSeq: null, newestSeq: null };
-      pendingSeqRef.current = 0;
-      setRows([]);
-      setSubAgentLiveMap({});
-      setPendingUserRows([]);
-      setRunActiveState(false);
-      setHasMore(false);
-      setLoadingOlder(false);
-
-      void loadInitial(sessionId);
-
       const controller = new AbortController();
       abortRef.current = controller;
       const base = String(apiBase ?? '/api/v1').replace(/\/+$/, '');
+      const scheduleReconnect = () => {
+        if (sessionIdRef.current !== sessionId) return;
+        clearReconnectTimer();
+        const attempt = reconnectAttemptRef.current++;
+        const delay = Math.min(1000 * 2 ** attempt, 30000);
+        reconnectTimerRef.current = window.setTimeout(() => {
+          reconnectTimerRef.current = null;
+          if (sessionIdRef.current !== sessionId) return;
+          openStream(sessionId, token, apiBase);
+        }, delay);
+      };
       void connectSse(
         `${base}/runtime/${sessionId}/stream`,
         token,
         {
-          onOpen: () => {},
+          onOpen: () => {
+            reconnectAttemptRef.current = 0;
+            clearReconnectTimer();
+          },
           onMessage: (payload: string) => {
             try {
               const parsed = JSON.parse(payload) as Record<string, unknown>;
@@ -511,21 +566,50 @@ export function useTimelineStream(api: ApiClient): TimelineStream {
             }
           },
           onError: () => {
-            // 断线不自动重连：由上层（CopilotView）按需重建
+            scheduleReconnect();
           },
         },
         controller.signal,
-      );
+      ).catch(() => scheduleReconnect());
     },
-    [handleSseEvent, loadInitial],
+    [clearReconnectTimer, handleSseEvent],
   );
 
-  // 卸载时断开
+  // 会话切换即重建：先断开旧流、清空状态；由 CopilotView 在选会话时调用 connect()。
+  const connect = useCallback(
+    (sessionId: number, token: string, apiBase: string) => {
+      clearReconnectTimer();
+      reconnectAttemptRef.current = 0;
+      if (abortRef.current) abortRef.current.abort();
+      sessionIdRef.current = sessionId;
+      cursorsRef.current = { oldestSeq: null, newestSeq: null };
+      pendingSeqRef.current = 0;
+      answeredRunIdsRef.current.clear();
+      setRows([]);
+      setSubAgentLiveMap({});
+      setPendingUserRows([]);
+      setRunActiveState(false);
+      setHasMore(false);
+      setLoadingOlder(false);
+
+      void loadInitial(sessionId);
+      openStream(sessionId, token, apiBase);
+    },
+    [clearReconnectTimer, loadInitial, openStream],
+  );
+
+  /** 乐观提交澄清后立即登记已应答，防止 refreshLatest 用旧 PENDING 回退。 */
+  const markClarificationAnswered = useCallback((runId: number) => {
+    answeredRunIdsRef.current.add(String(runId));
+  }, []);
+
+  // 卸载时断开连接并清理重连定时器
   useEffect(() => {
     return () => {
+      clearReconnectTimer();
       if (abortRef.current) abortRef.current.abort();
     };
-  }, []);
+  }, [clearReconnectTimer]);
 
   const loadSubAgentSteps = useCallback(
     (subAgentRunId: number) => api.subAgentTimeline(subAgentRunId),
@@ -549,5 +633,6 @@ export function useTimelineStream(api: ApiClient): TimelineStream {
     handleSseEvent,
     loadSubAgentSteps,
     connect,
+    markClarificationAnswered,
   };
 }
