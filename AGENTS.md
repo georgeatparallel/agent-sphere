@@ -43,6 +43,23 @@ GitHub flow off `main`. **No test CI** — run each project's tests before pushi
 
 - Pushing the `v*` tag triggers the deploy workflow (see above); verify the run at the repo's Actions tab.
 
+### 本地 CI（.local-workflow）— 替代慢的 GitHub Action
+
+`deploy.yml` 的唯一 job 要把镜像跨境推到阿里云 ACR，这是全流程最慢的一步。`.local-workflow/deploy.sh` 在本地复刻同一流程（ ACR 登录 → buildx 串行构建推送三镜像 → 改写 k8s tag 并 commit&push main → 自动递增版本号 → 打包扩展 → 建 GitHub Release ），缓存用 `type=local` 落在 `.local-workflow/.cache/`，**用 `--dry-run` 可先看计划（不改任何文件）**。
+
+```bash
+cp .local-workflow/.env.example .local-workflow/.env   # 填 ACR_USERNAME / ACR_PASSWORD
+./.local-workflow/deploy.sh --dry-run                  # 预演
+./.local-workflow/deploy.sh                            # 完整发版
+./.local-workflow/deploy.sh --skip-existing            # 重跑：镜像已在 ACR 就跳过
+./.local-workflow/deploy.sh --no-tag --only backend     # 只发镜像不发 Release
+```
+
+- 脚本入库，`.env` / `.cache/` / `output/` 被 gitignore；ACR 凭据在 `.env`，GitHub token 复用 `local-config/token.json`（或 `GITHUB_TOKEN` 环境变量）。
+- 与 `deploy.yml` 的关键差异：要求当前分支 = `main` 且工作树干净；`ACR_REGISTRY` 未配置时从 `k8s/05-backend.yaml` 反推；git 走 HTTPS + `GIT_ASKPASS`（token 不进 argv/日志）；扩展打包在 `mktemp -d` 里改版本号（`deploy.yml` 直接改仓库内 `manifest.json` 且不还原）；版本号由脚本 patch+1 自动递增并保留 `-alpha` 后缀。tag 仍锚在改 k8s 之前的提交，与 `deploy.yml` 同序。
+- 三个镜像**每次全部重建推送**（`--skip-existing` / `--only` 可裁剪）。buildx 必须是 `docker-container` driver 才支持 `cache-to type=local`，脚本会自动建 `as-builder`。arm64 宿主自动加 `--platform linux/amd64`（k3s 节点是 amd64）。
+- 本地 CI **不含 lint / test / typecheck**，改代码仍按各项目约定自测（见下）。
+
 ## agent-sphere-copilot-widget (chat widget)
 
 Independent package — install/build only from inside `agent-sphere-copilot-widget/`. Stack: Vite 6 (lib mode, IIFE `AgentSphereWidget`), React 19, TypeScript (strict). **No CopilotKit / AG-UI** — chat renders a typed REST+SSE timeline (same shape as the main UI `chat` page).

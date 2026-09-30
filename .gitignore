@@ -103,4 +103,9 @@ docs/superpowers
 .wrangler
 requestRecord.mock.js
 
+# 本地 CI（.local-workflow）：脚本入库，凭据/缓存/产物不入库
+/.local-workflow/.env
+/.local-workflow/.cache/
+/.local-workflow/output/
+
 

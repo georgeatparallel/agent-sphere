@@ -1,7 +1,14 @@
+# syntax=docker/dockerfile:1
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 COPY . .
-RUN mvn install -Dmaven.test.skip=true -q
+# `--mount=type=cache,target=/root/.m2` 是这里唯一值得加的东西。
+# 下面这行 COPY 让 `mvn install` 这一层跟着源码一起失效：源码一改，依赖就要重下一次
+# （约 200MB+）。挂 cache mount 后 ~/.m2 由 buildx 缓存目录托管、日常发版不再有依赖
+# 下载，只剩编译。分层结构刻意不动 —— 试过「先只 COPY 全部 pom.xml 再
+# dependency:go-offline」，多模块 reactor 会因找不到兄弟模块 artifact 直接失败，收益不抵风险。
+# 需要 BuildKit：buildx 可用；`docker build` 请确保 DOCKER_BUILDKIT=1。
+RUN --mount=type=cache,target=/root/.m2 mvn install -Dmaven.test.skip=true -q
 
 # 把 Spring Boot fat jar 拆成 4 层。实测本 jar 75.4MB，其中：
 #   dependencies        73.6MB  ← 只在 pom 变化时才需要重推
