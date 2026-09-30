@@ -1,0 +1,19 @@
+# 构建上下文只需要各模块源码与 pom，其余一律排除。
+#
+# 重点排除 target/：本仓库是多模块 Maven，各模块的 target/ 里包含上一次构建的 jar 与 classes
+# （实测本地 agent-sphere/ 共 98MB，其中 bootstrap 的 fat jar 就 75MB）。不打进上下文既省传输，
+# 也让 `COPY . .` 这层的哈希只随源码变化，缓存判定更稳定。
+target
+**/target
+
+# 版本控制与 IDE
+.git
+.gitignore
+.idea
+*.iml
+.vscode
+
+# 日志与说明文档
+logs
+*.log
+*.md
