@@ -1,17 +1,29 @@
 package com.buukle.agent.instance.service.impl;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.buukle.agent.common.config.SystemConfigKeys;
 import com.buukle.agent.common.config.SystemConfigSpi;
 import com.buukle.agent.common.constant.FileStoreBizKeys;
+import com.buukle.agent.common.context.AuthContext;
+import com.buukle.agent.common.context.TenantUtil;
 import com.buukle.agent.common.eventbus.DistributedRuntimeConstants;
+import com.buukle.agent.instance.domain.vo.SessionCleanupRunRowVO;
 import com.buukle.agent.instance.dtvo.enums.RunEnum;
+import com.buukle.agent.instance.dtvo.enums.SessionCleanupRunStatusEnum;
+import com.buukle.agent.instance.dtvo.enums.SessionCleanupTriggerEnum;
 import com.buukle.agent.instance.dtvo.vo.SessionCleanupReportVO;
+import com.buukle.agent.instance.dtvo.vo.SessionCleanupRunVO;
 import com.buukle.agent.instance.repository.SessionCleanupMapper;
+import com.buukle.agent.instance.repository.SessionCleanupRunMapper;
 import com.buukle.agent.tasks.dtvo.enums.TaskEnum;
+import com.buukle.agent.util.json.JsonUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -22,6 +34,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 /**
@@ -81,9 +94,35 @@ public class SessionCleanupTask {
     private static final String SKIP_LOCK_REASON = "另一副本或另一次清理正在执行，本次跳过";
     private static final String SKIP_DISABLED_REASON = "清理开关 session.cleanup-enabled 为 false，本次跳过";
 
+    /** 记录表保留天数默认值；实际值来自 session.cleanup-log-retention-days。 */
+    private static final int DEFAULT_LOG_RETENTION_DAYS = 90;
+
+    /** 报告里代表「执行记录表本身」的 key，便于前端一眼看出这一步动了多少行。 */
+    private static final String RUN_RECORD_TABLE = "agent_session_cleanup_run";
+
+    /** 定时任务没有请求上下文，记为 system（与 AuditMetaObjectHandler 的兜底一致）。 */
+    private static final String SYSTEM_OPERATOR = "system";
+
+    /** 超过此时长仍是 RUNNING 就标记 stale：进程崩了，别让运维误读成「正在清理」。 */
+    private static final long STALE_THRESHOLD_MINUTES = 30L;
+
+    /** table_stats（jsonb 文本）→ Map 的解析类型。 */
+    private static final TypeReference<Map<String, Long>> MAP_TYPE_REF = new TypeReference<>() {
+    };
+
     private final SessionCleanupMapper sessionCleanupMapper;
+    private final SessionCleanupRunMapper sessionCleanupRunMapper;
     private final SystemConfigSpi systemConfigSpi;
     private final RedissonClient redissonClient;
+
+    /**
+     * 异步执行用的执行器（infrastructure 的 {@code runtimeAsyncExecutor}，虚拟线程 + 上下文传播）。
+     *
+     * <p>这里按 bean 名注入而不是 {@code @Async}：{@code @Async} 在同类内部自调用不生效，
+     * 而本类既要异步提交（HTTP/cron 入口）又要同步执行（单测断言删除顺序），拆两个 Bean 反而绕。
+     */
+    @Qualifier("runtimeAsyncExecutor")
+    private final Executor cleanupExecutor;
 
     @Value("${buukle.agent.session.cleanup-batch-size:200}")
     private int batchSize;
@@ -97,17 +136,70 @@ public class SessionCleanupTask {
     /** 定时入口：低峰期执行（默认 04:30）。 */
     @Scheduled(cron = "${buukle.agent.session.cleanup-cron:0 30 4 * * ?}")
     public void scheduledCleanup() {
-        runCleanup(false);
+        runCleanup(false, SessionCleanupTriggerEnum.TRIGGER_SCHEDULED);
     }
 
     /**
-     * 执行一轮清理。
+     * 执行记录的列表查询（管理端「执行记录」抽屉）。
      *
-     * @param dryRun true 时只统计「将会删除多少行」，不落刀
-     * @return 报告（定时任务忽略返回值，手动接口直接回给前端）
+     * @param dryRun null 表示不按预演/实删过滤（预演与真实执行都列出来，靠类型列区分）
      */
-    public SessionCleanupReportVO runCleanup(boolean dryRun) {
-        long startedAt = System.currentTimeMillis();
+    public IPage<SessionCleanupRunVO> listRuns(String triggerType, String status, Boolean dryRun,
+                                               long page, long size) {
+        Page<SessionCleanupRunRowVO> rowPage = new Page<>(page, size);
+        IPage<SessionCleanupRunRowVO> rows = sessionCleanupRunMapper.pageRuns(rowPage, triggerType, status,
+                dryRun, staleBefore());
+        Page<SessionCleanupRunVO> voPage = new Page<>(rows.getCurrent(), rows.getSize(), rows.getTotal());
+        voPage.setRecords(rows.getRecords().stream().map(this::toRunVO).toList());
+        return voPage;
+    }
+
+    /**
+     * 异步提交一轮清理，**立即返回**执行记录（status=RUNNING）。
+     *
+     * <p>HTTP 入口用它而不是同步执行：一轮最多 200×50 个会话、耗时可达数分钟，
+     * 让请求线程干等既拖垮连接池，前端也只能靠超时猜结果。改为「提交即返回 + 轮询执行记录」。
+     *
+     * <p>记录在<b>请求线程</b>上插入（不是后台线程），这样前端拿到的 id 立刻可查；
+     * operator 也必须在提交前取 —— 手动执行记成 system 会丢掉「谁触发的」这条线索。
+     *
+     * @return 初始状态的执行记录，前端拿其中的 id 去轮询 {@link #getRun(Long)}
+     */
+    public SessionCleanupRunVO submitCleanup(boolean dryRun, String trigger) {
+        String operator = currentOperator();
+        Long recordId = sessionCleanupRunMapper.insertRunning(trigger, dryRun,
+                SessionCleanupRunStatusEnum.STATUS_RUNNING, operator);
+        cleanupExecutor.execute(() -> runCleanupInRecord(dryRun, recordId, operator));
+        SessionCleanupRunRowVO row = sessionCleanupRunMapper.getRun(recordId, staleBefore());
+        return row == null ? null : toRunVO(row);
+    }
+
+    /** 轮询单条执行记录（含实时进度）。 */
+    public SessionCleanupRunVO getRun(Long id) {
+        SessionCleanupRunRowVO row = sessionCleanupRunMapper.getRun(id, staleBefore());
+        return row == null ? null : toRunVO(row);
+    }
+
+    /**
+     * 同步执行一轮清理（测试与内部同步调用走它）。
+     *
+     * <p>HTTP 与 cron 入口都用 {@link #submitCleanup} 异步提交，这里保留同步语义是为了让
+     * 单测能直接断言删除顺序与记录终态，不必去等虚拟线程。
+     */
+    public SessionCleanupReportVO runCleanup(boolean dryRun, String trigger) {
+        String operator = currentOperator();
+        Long recordId = sessionCleanupRunMapper.insertRunning(trigger, dryRun,
+                SessionCleanupRunStatusEnum.STATUS_RUNNING, operator);
+        return runCleanupInRecord(dryRun, recordId, operator);
+    }
+
+    /**
+     * 真正的执行体：抢锁 → 清理 → 落终态，异常上抛前先留 FAILED 记录。
+     *
+     * <p>记录先于锁：抢不到锁也是一种「发生过的事」，需要能查到。
+     */
+    private SessionCleanupReportVO runCleanupInRecord(boolean dryRun, Long recordId, String operator) {
+        long startedAtMillis = System.currentTimeMillis();
         SessionCleanupReportVO report = new SessionCleanupReportVO();
         report.setDryRun(dryRun);
 
@@ -115,18 +207,21 @@ public class SessionCleanupTask {
         if (!lock.tryLock()) {
             report.setSkippedByLock(true);
             report.setSkipReason(SKIP_LOCK_REASON);
+            markSkipped(recordId, report, startedAtMillis, operator);
             return report;
         }
         try {
             if (!isCleanupEnabled()) {
                 report.setEnabled(false);
                 report.setSkipReason(SKIP_DISABLED_REASON);
+                markSkipped(recordId, report, startedAtMillis, operator);
                 return report;
             }
             report.setEnabled(true);
 
             int retentionDays = resolveRetentionDays();
             int fileRetentionDays = resolveFileRetentionDays();
+            int logRetentionDays = resolveLogRetentionDays();
             BatchBudget budget = new BatchBudget(Math.max(maxBatches, 1));
             int sizeLimit = Math.max(batchSize, 1);
 
@@ -138,16 +233,47 @@ public class SessionCleanupTask {
             report.setFileCutoff(fileCutoff);
             report.setSkippedActiveSessions(sessionCleanupMapper.countActiveBlockedSessions(
                     cutoff, ACTIVE_RUN_STATUSES, ACTIVE_TASK_STATUSES));
+            // 进度分母：算一次就固定下来（dry-run 期间一行不删，现场重算必然失真）
+            report.setTotalSessions((int) sessionCleanupMapper.countExpiredSessions(
+                    cutoff, ACTIVE_RUN_STATUSES, ACTIVE_TASK_STATUSES));
 
-            cleanupExpiredSessions(cutoff, dryRun, sizeLimit, budget, report);
+            cleanupExpiredSessions(cutoff, dryRun, sizeLimit, budget, report, recordId, operator,
+                    startedAtMillis);
             cleanupIndependent(cutoff, fileCutoff, dryRun, sizeLimit, budget, report);
+            cleanupOldRunRecords(logRetentionDays, dryRun, report, recordId);
             report.setTruncated(budget.truncated);
-            report.setElapsedMs(System.currentTimeMillis() - startedAt);
+            report.setElapsedMs(System.currentTimeMillis() - startedAtMillis);
             report.setVacuumHint(dryRun ? null : VACUUM_HINT);
             logSummary(report);
+            markSuccess(recordId, report, operator);
             return report;
+        } catch (Exception e) {
+            // 清理异常先留下 FAILED 记录，否则这次尝试等于没发生过。
+            // 异步入口下没人接收异常，所以完整堆栈必须在这里落日志（同步调用也会多一行，符合预期）。
+            sessionCleanupRunMapper.markFailed(recordId, SessionCleanupRunStatusEnum.STATUS_FAILED,
+                    abbreviate(e.getMessage()), System.currentTimeMillis() - startedAtMillis, operator);
+            log.error("Session cleanup failed: recordId={}, dryRun={}", recordId, dryRun, e);
+            throw e;
         } finally {
             lock.unlock();
+        }
+    }
+
+    /**
+     * 记录表自身的保留策略。
+     *
+     * <p>放在<b>最后</b>，且排除本轮刚写的记录（{@code id <> keepId}）：这张表量很小
+     * （每天至多一条自动记录），一次全量删即可，不需要像业务表那样分批。
+     */
+    private void cleanupOldRunRecords(int logRetentionDays, boolean dryRun,
+                                      SessionCleanupReportVO report, Long currentRecordId) {
+        LocalDateTime logCutoff = LocalDateTime.now().minusDays(logRetentionDays);
+        if (dryRun) {
+            addStat(report, RUN_RECORD_TABLE,
+                    sessionCleanupRunMapper.countOlderThan(logCutoff, currentRecordId));
+        } else {
+            addStat(report, RUN_RECORD_TABLE,
+                    sessionCleanupRunMapper.deleteOlderThan(logCutoff, currentRecordId));
         }
     }
 
@@ -159,7 +285,8 @@ public class SessionCleanupTask {
      * agent_task），而逐表过滤会漏掉「会话很老、子行却是最近写的」这类数据。
      */
     private void cleanupExpiredSessions(LocalDateTime cutoff, boolean dryRun, int sizeLimit,
-                                        BatchBudget budget, SessionCleanupReportVO report) {
+                                        BatchBudget budget, SessionCleanupReportVO report,
+                                        Long recordId, String operator, long startedAtMillis) {
         while (budget.hasNext()) {
             List<Long> sessionIds = sessionCleanupMapper.selectExpiredSessionIds(
                     cutoff, ACTIVE_RUN_STATUSES, ACTIVE_TASK_STATUSES, sizeLimit);
@@ -168,6 +295,9 @@ public class SessionCleanupTask {
                 return;
             }
             budget.consume();
+            // batches 要在这里累加：它是「单轮批次数预算」的消耗量，也是给运维看的实际批数。
+            // 漏加会导致报告/记录里的批次数只统计到后面几个独立清理类别。
+            report.setBatches(report.getBatches() + 1);
             report.setSessionCount(report.getSessionCount() + sessionIds.size());
 
             List<Long> taskIds = collectTaskIds(sessionIds);
@@ -178,6 +308,8 @@ public class SessionCleanupTask {
                 deleteTimelineSeqKeys(sessionIds);
                 sleepBetweenBatches();
             }
+            // 每批同步一次进度：前端进度条靠这个动起来（最多 max-batches 次）
+            markProgress(recordId, report, operator, startedAtMillis);
         }
         // 因批次预算耗尽而退出，后面很可能还有数据
         budget.markTruncated();
@@ -344,6 +476,105 @@ public class SessionCleanupTask {
                 SystemConfigKeys.SESSION_FILE_RETENTION_DAYS);
     }
 
+    private int resolveLogRetentionDays() {
+        return parsePositiveInt(systemConfigSpi.get(SystemConfigKeys.SESSION_CLEANUP_LOG_RETENTION_DAYS,
+                String.valueOf(DEFAULT_LOG_RETENTION_DAYS)), DEFAULT_LOG_RETENTION_DAYS,
+                SystemConfigKeys.SESSION_CLEANUP_LOG_RETENTION_DAYS);
+    }
+
+    /** 落 SUCCESS：把本轮的完整口径与结果写回记录。 */
+    private void markSuccess(Long recordId, SessionCleanupReportVO report, String operator) {
+        // VACUUM 建议写进 remark（该表由机器写入、没有人工备注场景，不值得为一句展示文案再开一个迁移）
+        String remark = !report.isDryRun() && totalRows(report) > 0 ? VACUUM_HINT : null;
+        sessionCleanupRunMapper.markSuccess(recordId, SessionCleanupRunStatusEnum.STATUS_SUCCESS,
+                report.getRetentionDays(), report.getFileRetentionDays(), report.getCutoff(), report.getFileCutoff(),
+                report.getSessionCount(), report.getTotalSessions(), totalRows(report),
+                report.getSkippedActiveSessions(), report.getBatches(), report.isTruncated(),
+                report.getElapsedMs(), JsonUtils.toJson(report.getTableStats()), remark, operator);
+    }
+
+    /**
+     * 逐批同步进度：不改 status、不写 finished_at，记录仍是 RUNNING。
+     * 单轮最多 {@code cleanup-max-batches} 次 UPDATE，开销可忽略。
+     */
+    private void markProgress(Long recordId, SessionCleanupReportVO report,
+                              String operator, long startedAtMillis) {
+        if (recordId == null) {
+            return;
+        }
+        sessionCleanupRunMapper.markProgress(recordId, report.getTotalSessions(), report.getSessionCount(),
+                totalRows(report), report.getBatches(), System.currentTimeMillis() - startedAtMillis,
+                JsonUtils.toJson(report.getTableStats()), operator);
+    }
+
+    private LocalDateTime staleBefore() {
+        return LocalDateTime.now().minusMinutes(STALE_THRESHOLD_MINUTES);
+    }
+
+    /** 落 SKIPPED：锁被占用或急停开关关闭 —— 什么都没删也要有痕迹。 */
+    private void markSkipped(Long recordId, SessionCleanupReportVO report,
+                             long startedAtMillis, String operator) {
+        sessionCleanupRunMapper.markSkipped(recordId, SessionCleanupRunStatusEnum.STATUS_SKIPPED,
+                report.getSkipReason(), System.currentTimeMillis() - startedAtMillis, operator);
+    }
+
+    /**
+     * 记录里的 operator。优先级与 {@code AuditMetaObjectHandler.currentUser()} 一致
+     * （租户 → 登录用户 → system）：定时任务没有请求上下文，只能落到 system。
+     * 这里内联一份是因为那个 Handler 在 infrastructure，instance 引它会成环。
+     */
+    private String currentOperator() {
+        String tenant = TenantUtil.get();
+        if (tenant != null && !tenant.isBlank()) {
+            return tenant;
+        }
+        String auth = AuthContext.getUsername();
+        if (auth != null && !auth.isBlank()) {
+            return auth;
+        }
+        return SYSTEM_OPERATOR;
+    }
+
+    /** 异常信息截断，避免超长堆栈描述把记录表撑大。 */
+    private String abbreviate(String message) {
+        final int max = 500;
+        if (message == null) {
+            return null;
+        }
+        return message.length() <= max ? message : message.substring(0, max);
+    }
+
+    /** 行形态 → API 形态，顺带把 jsonb 文本解析成各表行数 Map。 */
+    private SessionCleanupRunVO toRunVO(SessionCleanupRunRowVO row) {
+        SessionCleanupRunVO vo = new SessionCleanupRunVO();
+        vo.setId(row.getId());
+        vo.setTriggerType(row.getTriggerType());
+        vo.setDryRun(row.isDryRun());
+        vo.setStatus(row.getStatus());
+        vo.setRetentionDays(row.getRetentionDays());
+        vo.setFileRetentionDays(row.getFileRetentionDays());
+        vo.setCutoff(row.getCutoff());
+        vo.setFileCutoff(row.getFileCutoff());
+        vo.setSessionCount(row.getSessionCount());
+        vo.setTotalSessions(row.getTotalSessions());
+        vo.setTotalRows(row.getTotalRows());
+        vo.setSkippedActiveSessions(row.getSkippedActiveSessions());
+        vo.setBatches(row.getBatches());
+        vo.setTruncated(row.getTruncated());
+        vo.setElapsedMs(row.getElapsedMs());
+        vo.setSkipReason(row.getSkipReason());
+        vo.setErrorMessage(row.getErrorMessage());
+        vo.setStartedAt(row.getStartedAt());
+        vo.setFinishedAt(row.getFinishedAt());
+        vo.setStale(row.getStale());
+        vo.setCreatedBy(row.getCreatedBy());
+        vo.setRemark(row.getRemark());
+        if (row.getTableStats() != null && !row.getTableStats().isBlank()) {
+            vo.setTableStats(JsonUtils.parse(row.getTableStats(), MAP_TYPE_REF));
+        }
+        return vo;
+    }
+
     /** 配置非法（空串/非数字/非正数）时回退默认值并告警，不因配置写错而让清理停摆或删光数据。 */
     private int parsePositiveInt(String raw, int fallback, String key) {
         if (raw == null || raw.isBlank()) {
@@ -374,6 +605,11 @@ public class SessionCleanupTask {
         }
         log.warn("Session cleanup: 开关值 {} 不是合法布尔值，回退默认值 {}", value, fallback);
         return fallback;
+    }
+
+    /** 报告里各表行数之和。 */
+    private long totalRows(SessionCleanupReportVO report) {
+        return report.getTableStats().values().stream().mapToLong(Long::longValue).sum();
     }
 
     /** 只在真有东西被删时才打 INFO（对齐 AuditLogCleanupTask，避免每轮刷屏）；dry-run 是人工请求，必打。 */

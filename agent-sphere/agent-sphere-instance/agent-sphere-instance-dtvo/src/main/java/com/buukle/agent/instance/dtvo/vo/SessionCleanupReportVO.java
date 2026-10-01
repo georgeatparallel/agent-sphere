@@ -40,6 +40,12 @@ public class SessionCleanupReportVO implements Serializable {
     /** 删除的会话数 */
     private int sessionCount;
 
+    /**
+     * 进度分母：执行前 count 出的过期会话总数。
+     * 同步执行路径（单测/内部调用）的报告也带它，异步路径则落在执行记录上供前端轮询。
+     */
+    private int totalSessions;
+
     /** 因仍在跑（PENDING/RUNNING 的 run 或 task）而被活跃守卫挡住的会话数 */
     private long skippedActiveSessions;
 

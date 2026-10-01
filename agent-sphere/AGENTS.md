@@ -64,7 +64,7 @@ Env overrides (defaults): `DB_HOST` (127.0.0.1), `DB_PORT` (5432), `DB_USERNAME`
 
 ## Flyway
 
-Migrations: `agent-sphere-bootstrap/src/main/resources/db/migration/V<n>__desc.sql` (currently V1–V75; check the directory for the current highest number before adding a new one). `baseline-on-migrate: true`, baseline 0. Add new `V<n>` files; never edit applied migrations.
+Migrations: `agent-sphere-bootstrap/src/main/resources/db/migration/V<n>__desc.sql` (currently V1–V78; check the directory for the current highest number before adding a new one). `baseline-on-migrate: true`, baseline 0. Add new `V<n>` files; never edit applied migrations.
 
 ## Session data cleanup (disk reclamation)
 
@@ -74,9 +74,16 @@ Migrations: `agent-sphere-bootstrap/src/main/resources/db/migration/V<n>__desc.s
 - **Delete order is a foreign-key contract.** Only two real FKs exist and neither has `ON DELETE CASCADE`: `agent_run.session_id → agent_session` and `agent_task_artifact.task_id → agent_task`. Method order in the mapper == execution order; `SessionCleanupTaskTest` asserts it with `InOrder`. Reordering breaks production with `violates foreign key constraint`.
 - **Expiry = `agent_session.created_at < cutoff AND updated_at < cutoff`**, plus two `NOT EXISTS` guards for `PENDING`/`RUNNING` runs and `QUEUED`/`RUNNING` tasks (a long Bole task only updates `task`/`run` rows, never the session row, so time alone is not enough). `AWAITING_USER` is intentionally **not** guarded — a clarification nobody answers would block cleanup forever.
 - **Multi-replica**: `k8s/05-backend.yaml` has `replicas: 2`, so the job takes the Redisson lock `scheduler:session-cleanup` (same pattern as `AuditLogCleanupTask`).
-- **Config split**: retention days + kill switch live in `agent_system_config` (`config_group='session'`, keys in `SystemConfigKeys`, seeded by `V75`); cron/batch size/sleep live in `application.yml` under the existing `buukle.agent.session` block. Change retention without a redeploy.
+- **Config split**: retention days + kill switch live in `agent_system_config` (`config_group='session'`, keys in `SystemConfigKeys`, seeded by `V75`/`V77`); cron/batch size/sleep live in `application.yml` under the existing `buukle.agent.session` block. Change retention without a redeploy.
+- **Every run is recorded** in `agent_session_cleanup_run` (`SessionCleanupRunMapper`, seeded table in `V76`): both the cron and the manual endpoint. The RUNNING row is inserted **before** the lock is taken, so "lock was busy" and "kill switch off" also leave a trace (`status=SKIPPED` + `skip_reason`) — otherwise nobody can explain why the disk did not shrink. Terminal states: `SUCCESS` (with `table_stats` jsonb per-table rows), `SKIPPED`, `FAILED` (+`error_message`, and the exception is still rethrown). Previews (`dryRun=true`) are recorded too — the irreversible-delete audit trail needs them. The run table prunes itself as the job's last phase (`session.cleanup-log-retention-days`, excluding the current row).
+- **Do not reuse `sys_audit_log` for these records**: `AuditLogCleanupTask` deletes it after 7/90 days, so cleanup history would erase itself.
+- **jsonb without a type handler**: `table_stats` is written with `CAST(#{json} AS jsonb)` and read with `CAST(table_stats AS text)` (parsed by `JsonUtils`). A MyBatis-Plus entity cannot do this — a `String` binding is rejected by PG for a jsonb column, and `JsonbTypeHandler` lives in `infrastructure`, which already depends on `instance-service`.
+- **`GET /api/v1/instance/session-cleanup/runs`** lists the history (`Page<SessionCleanupRunVO>`, permission `admin:settings:read`). The SQL computes a `stale` flag (`finished_at IS NULL AND started_at < now() - 30min`) so a crashed process's zombie RUNNING row is not mistaken for an in-flight cleanup.
 - **Indexes**: `V74` adds the ones cleanup needs (`agent_session(delete_flag,created_at)`, `agent_task(session_id)`, …). Without them the driving query seq-scans.
-- **Manual trigger**: `POST /api/v1/instance/session-cleanup` (permission `admin:settings:update`), `dryRun` defaults to **true**. It is synchronous and can take minutes — that is intended, so the caller gets the report back.
+- **Manual trigger is asynchronous**: `POST /api/v1/instance/session-cleanup` (permission `admin:settings:update`, `dryRun` defaults to **true**) only *submits* — it inserts the RUNNING record on the request thread and returns it immediately; the work runs on `runtimeAsyncExecutor`. A round can span 200×50 sessions and take minutes, so blocking the request thread would tie up the pool and leave the client guessing. Poll `GET /runs/{id}` for progress and result.
+- **Progress**: `countExpiredSessions` is called **once** up front and stored in the record's `total_sessions` (`V78`); every batch writes `session_count` / `total_rows` / `table_stats` back via `markProgress`. Never recompute the denominator mid-run — during a dry-run nothing is deleted, so a live count would drift with the numerator and the percentage would be meaningless.
+- **Operator is captured before submitting**: `currentOperator()` runs on the request thread, otherwise a manual run would be recorded as `system`.
+- **`runCleanup` stays synchronous on purpose** — `submitCleanup` wraps it for HTTP/cron, while the sync method keeps assertions on delete ordering and terminal record states straightforward in unit tests. Do not add `@Async` to the class: it would not apply to same-class calls anyway.
 - **Disk is not returned to the OS.** Hard delete only frees space for reuse inside PG; the data files stay the same size. The job logs a `VACUUM (FULL, ANALYZE)` hint instead of running it (ACCESS EXCLUSIVE lock).
 - Sibling job `AuditLogCleanupTask` stays in `infrastructure/config` — audit logs are that module's domain; only session cleanup moved.
 
@@ -86,6 +93,17 @@ Migrations: `agent-sphere-bootstrap/src/main/resources/db/migration/V<n>__desc.s
 - `map-underscore-to-camel-case` enabled.
 - Type handlers package: `com.buukle.agent.infrastructure.handler` (includes `JsonbTypeHandler` for PG jsonb).
 - Audit meta auto-filled by `AuditMetaObjectHandler` (creates/updates timestamps and user info).
+
+## Annotation SQL: how to write `<` in `@Select`/`@Delete`/…
+
+MyBatis only XML-parses the annotation string when it is wrapped in `<script>`, and only then decodes entities. Without the wrapper the string reaches JDBC **verbatim**, so `created_at &lt; ?` reaches PG as `created_at lt ?` → `ERROR: column "lt" does not exist` (really hit: three `SessionCleanupMapper` selects forgot the wrapper). The reverse — a bare `<` inside `<script>` — blows up at parse time.
+
+| Situation | Correct form |
+| --- | --- |
+| No dynamic SQL | bare `<` / `>`; **no** `<script>` (e.g. `SessionCleanupRunMapper#deleteOlderThan`) |
+| Any dynamic tag (`<foreach>`, `<if>`, `<choose>`, `<trim>`…) | wrap in `<script>`, and write every `<` as `&lt;` |
+
+`MapperSqlEscapingTest` (bootstrap, source-scanning) enforces both directions across all modules. Note when touching it: it must scan **depth-agnostically** — sub-modules nest one level deep (`agent-sphere/agent-sphere-instance/agent-sphere-instance-repository/src/main/java`), and assuming modules are direct children of the root silently scans almost nothing while still passing.
 
 ## Conventions
 

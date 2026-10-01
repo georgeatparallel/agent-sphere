@@ -2,6 +2,67 @@ import { request } from '@umijs/max';
 
 const BASE = '/api/v1';
 
+/**
+ * 会话清理执行报告（后端 SessionCleanupReportVO）。
+ * tableStats 的 key 是数据库表名，运维直接看得懂。
+ */
+export interface SessionCleanupReport {
+  dryRun: boolean;
+  enabled: boolean;
+  skippedByLock: boolean;
+  skipReason?: string;
+  retentionDays: number;
+  fileRetentionDays: number;
+  cutoff?: string;
+  fileCutoff?: string;
+  sessionCount: number;
+  skippedActiveSessions: number;
+  tableStats: Record<string, number>;
+  batches: number;
+  truncated: boolean;
+  elapsedMs: number;
+  vacuumHint?: string;
+  /** 进度分母：执行前算出的过期会话总数 */
+  totalSessions?: number;
+}
+
+/** 会话清理执行记录（后端 SessionCleanupRunVO）。定时与手动两种触发都会留痕。 */
+export interface SessionCleanupRun {
+  id: number;
+  triggerType: 'SCHEDULED' | 'MANUAL';
+  dryRun: boolean;
+  status: 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIPPED';
+  retentionDays?: number;
+  fileRetentionDays?: number;
+  cutoff?: string;
+  fileCutoff?: string;
+  sessionCount?: number;
+  /** 进度分母：执行前 count 出的过期会话总数；进度 = sessionCount / totalSessions */
+  totalSessions?: number;
+  totalRows?: number;
+  skippedActiveSessions?: number;
+  batches?: number;
+  truncated?: boolean;
+  elapsedMs?: number;
+  tableStats?: Record<string, number>;
+  skipReason?: string;
+  errorMessage?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  /** 疑似中断：进程崩了导致记录永远停在 RUNNING */
+  stale?: boolean;
+  createdBy?: string;
+  /** 后端写给运维的提示（当前是硬删后的 VACUUM 建议），前端原样展示 */
+  remark?: string;
+}
+
+export interface PageResult<T> {
+  records: T[];
+  total: number;
+  current: number;
+  size: number;
+}
+
 export const agentApi = {
   system: {
     // 公开配置读取（无需登录）：当前支持 plugin.download-url
@@ -343,6 +404,29 @@ export const agentApi = {
     },
     deletePlugin: () =>
       request<any>(`${BASE}/system/config/plugin`, { method: 'DELETE' }),
+    /**
+     * 提交一轮清理（异步，立即返回执行记录）。
+     * 进度与结果要用返回记录的 id 轮询 {@link getSessionCleanupRun}。
+     */
+    cleanupSessions: (dryRun: boolean) =>
+      request<SessionCleanupRun>(`${BASE}/instance/session-cleanup`, {
+        method: 'POST',
+        data: { dryRun },
+      }),
+    /** 轮询单条执行记录（含实时进度）。 */
+    getSessionCleanupRun: (id: number) =>
+      request<SessionCleanupRun>(`${BASE}/instance/session-cleanup/runs/${id}`),
+    /** 清理执行记录；dryRun 传 undefined 表示不按预演/实删过滤。 */
+    listSessionCleanupRuns: (params?: {
+      triggerType?: string;
+      status?: string;
+      dryRun?: boolean;
+      page?: number;
+      size?: number;
+    }) =>
+      request<PageResult<SessionCleanupRun>>(`${BASE}/instance/session-cleanup/runs`, {
+        params,
+      }),
     roles: {
       list: (page = 1, size = 20) =>
         request<any>(`${BASE}/admin/roles`, { params: { page, size } }),

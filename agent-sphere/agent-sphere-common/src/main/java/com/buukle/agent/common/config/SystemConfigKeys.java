@@ -22,6 +22,8 @@ public final class SystemConfigKeys {
     public static final String SESSION_CLEANUP_RETENTION_DAYS = "session.cleanup-retention-days";
     /** 截图与聊天附件保留天数（agent_file_store；单张截图上限 8MB，磁盘占用大头，故与文本分开配置） */
     public static final String SESSION_FILE_RETENTION_DAYS = "session.file-retention-days";
+    /** 清理任务自身执行记录（agent_session_cleanup_run）的保留天数：记录表本身也要被清理，否则无限增长 */
+    public static final String SESSION_CLEANUP_LOG_RETENTION_DAYS = "session.cleanup-log-retention-days";
 
     /** 允许不经鉴权公开读取的配置键（仅安全/非敏感项） */
     public static final java.util.Set<String> PUBLIC_KEYS = java.util.Set.of(PLUGIN_DOWNLOAD_URL, PLUGIN_STORE_URL);

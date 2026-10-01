@@ -72,6 +72,34 @@ public interface SessionCleanupMapper {
                                         @Param("limit") int limit);
 
     /**
+     * 过期会话<b>总数</b>：进度条的分母。
+     *
+     * <p>WHERE 条件与 {@link #selectExpiredSessionIds} 完全一致，必须一致 ——
+     * 否则分母和实际处理量对不上，进度条会虚高或到不了 100%。
+     * 必须在执行开始时算一次并存进执行记录：dry-run 期间一行都不删，
+     * 现场重算分母会随已完成数一起变，百分比必然失真。
+     */
+    @Select("""
+            <script>
+            SELECT count(*) FROM agent_session s
+            WHERE s.delete_flag = 0
+              AND s.created_at &lt; #{cutoff}
+              AND s.updated_at  &lt; #{cutoff}
+              AND NOT EXISTS (
+                    SELECT 1 FROM agent_run r
+                    WHERE r.session_id = s.id AND r.status IN
+                    <foreach item="st" collection="activeRunStatuses" open="(" separator="," close=")">#{st}</foreach>)
+              AND NOT EXISTS (
+                    SELECT 1 FROM agent_task t
+                    WHERE t.session_id = s.id AND t.status IN
+                    <foreach item="st" collection="activeTaskStatuses" open="(" separator="," close=")">#{st}</foreach>)
+            </script>
+            """)
+    long countExpiredSessions(@Param("cutoff") LocalDateTime cutoff,
+                              @Param("activeRunStatuses") Collection<String> activeRunStatuses,
+                              @Param("activeTaskStatuses") Collection<String> activeTaskStatuses);
+
+    /**
      * 过了时间线、但因活跃守卫被挡住的会话数（诊断用）。
      *
      * <p>这个值偏大说明保留期相对业务节奏太激进、数据没降下来，运维需要知道是被什么挡住的。
@@ -320,19 +348,23 @@ public interface SessionCleanupMapper {
 
     /** LLM 交互孤儿：session_id 为空的行（idx_llm_interaction_created 已建）。 */
     @Select("""
+            <script>
             SELECT id FROM agent_llm_interaction_record
             WHERE session_id IS NULL AND created_at &lt; #{cutoff}
             ORDER BY id
             LIMIT #{limit}
+            </script>
             """)
     List<Long> selectOrphanLlmInteractionIds(@Param("cutoff") LocalDateTime cutoff,
                                              @Param("limit") int limit);
 
     @Select("""
+            <script>
             SELECT id FROM agent_memory
             WHERE session_id IS NULL AND created_at &lt; #{cutoff}
             ORDER BY id
             LIMIT #{limit}
+            </script>
             """)
     List<Long> selectOrphanMemoryIds(@Param("cutoff") LocalDateTime cutoff,
                                      @Param("limit") int limit);
@@ -352,10 +384,12 @@ public interface SessionCleanupMapper {
                                     @Param("limit") int limit);
 
     @Select("""
+            <script>
             SELECT id FROM agent_completions_call
             WHERE created_at &lt; #{cutoff}
             ORDER BY id
             LIMIT #{limit}
+            </script>
             """)
     List<Long> selectExpiredCompletionsCallIds(@Param("cutoff") LocalDateTime cutoff,
                                                @Param("limit") int limit);

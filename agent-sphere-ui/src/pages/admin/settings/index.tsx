@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useCan } from '@/hooks/usePermission';
 import { agentApi } from '@/services/agentSphere/api';
 import ResourceTemplateEditor from './resourceTemplate/ResourceTemplateEditor';
+import SessionCleanupRunPanel from './sessionCleanup';
+import SessionCleanupRunsDrawer from './sessionCleanupRuns';
+import { useSessionCleanupRun } from './useSessionCleanupRun';
 import { useStyles } from './style';
 
 interface ConfigItem {
@@ -36,6 +39,10 @@ export default function AdminSettings() {
   const [editValue, setEditValue] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [runsOpen, setRunsOpen] = useState(false);
+  const [cleanupRunId, setCleanupRunId] = useState<number | null>(null);
+  const [cleanupSubmitting, setCleanupSubmitting] = useState(false);
+  const { run: cleanupRun } = useSessionCleanupRun(cleanupRunId);
 
   const canUpdate = useCan('admin:settings:update');
   const canRegenerate = useCan('admin:settings:regenerate-aes');
@@ -111,6 +118,46 @@ export default function AdminSettings() {
       );
     }
     return false;
+  };
+
+  /**
+   * 提交一轮清理：先看有没有正在跑的任务，有就直接接管那条记录（不重复提交），
+   * 否则异步提交并打开面板轮询。
+   *
+   * 清理是异步的（后端立刻返回 RUNNING 记录），所以这里不等待结果 ——
+   * 进度与结果都由面板轮询执行记录得到。
+   */
+  const submitCleanup = async (dryRun: boolean) => {
+    setCleanupSubmitting(true);
+    try {
+      const existing = await findRunningRun();
+      if (existing) {
+        setCleanupRunId(existing.id);
+        message.info(
+          intl.formatMessage({
+            id: 'pages.admin.settings.cleanup.alreadyRunning',
+            defaultMessage: '已有清理在执行，切换到它的进度',
+          }),
+        );
+        return;
+      }
+      const run = await agentApi.admin.cleanupSessions(dryRun);
+      setCleanupRunId(run?.id ?? null);
+    } catch {
+      message.error(intl.formatMessage({ id: 'pages.chat.saveFailed' }));
+    } finally {
+      setCleanupSubmitting(false);
+    }
+  };
+
+  /** 是否已有 RUNNING 的记录（用于禁用按钮 + 接续展示）。 */
+  const findRunningRun = async () => {
+    const page = await agentApi.admin.listSessionCleanupRuns({
+      status: 'RUNNING',
+      page: 1,
+      size: 1,
+    });
+    return page?.records?.[0];
   };
 
   const handleDeletePlugin = () => {
@@ -215,6 +262,36 @@ export default function AdminSettings() {
         >
           {intl.formatMessage({ id: 'pages.admin.settings.regenerate.btn' })}
         </Button>
+      ) : group === 'session' && canUpdate ? (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button
+            size="small"
+            loading={cleanupSubmitting}
+            onClick={() => submitCleanup(true)}
+          >
+            {intl.formatMessage({
+              id: 'pages.admin.settings.cleanup.preview.btn',
+              defaultMessage: '预演清理',
+            })}
+          </Button>
+          <Button
+            size="small"
+            danger
+            loading={cleanupSubmitting}
+            onClick={() => submitCleanup(false)}
+          >
+            {intl.formatMessage({
+              id: 'pages.admin.settings.cleanup.real.btn',
+              defaultMessage: '立即清理',
+            })}
+          </Button>
+          <Button size="small" onClick={() => setRunsOpen(true)}>
+            {intl.formatMessage({
+              id: 'pages.admin.settings.cleanup.runs.btn',
+              defaultMessage: '执行记录',
+            })}
+          </Button>
+        </div>
       ) : group === 'plugin' && canUpdate ? (
         <div style={{ display: 'flex', gap: 8 }}>
           <Upload
@@ -270,6 +347,17 @@ export default function AdminSettings() {
           </Form.Item>
         </Form>
       </Modal>
+      <SessionCleanupRunPanel
+        open={cleanupRunId != null}
+        run={cleanupRun}
+        submitting={cleanupSubmitting}
+        onClose={() => setCleanupRunId(null)}
+        onConfirm={() => submitCleanup(false)}
+      />
+      <SessionCleanupRunsDrawer
+        open={runsOpen}
+        onClose={() => setRunsOpen(false)}
+      />
       <ResourceTemplateEditor
         open={templateOpen}
         initialValue={editingConfig?.configValue || ''}
