@@ -16,6 +16,12 @@ public final class SystemConfigKeys {
     public static final String USER_RESOURCE_TEMPLATE = "user.resource-template";
     /** 全局 LLM 采样默认配置（JSON，与 instance/completions config 同形状；agent 链路全局兜底） */
     public static final String LLM_DEFAULTS_CONFIG = "llm.defaults-config";
+    /** 历史会话清理急停开关（"true"/"false"）：清理是硬删不可逆，出问题先关此项，无需发版 */
+    public static final String SESSION_CLEANUP_ENABLED = "session.cleanup-enabled";
+    /** 会话数据保留天数：created_at 与 updated_at 均早于该天数的 session 及其关联数据会被清理 */
+    public static final String SESSION_CLEANUP_RETENTION_DAYS = "session.cleanup-retention-days";
+    /** 截图与聊天附件保留天数（agent_file_store；单张截图上限 8MB，磁盘占用大头，故与文本分开配置） */
+    public static final String SESSION_FILE_RETENTION_DAYS = "session.file-retention-days";
 
     /** 允许不经鉴权公开读取的配置键（仅安全/非敏感项） */
     public static final java.util.Set<String> PUBLIC_KEYS = java.util.Set.of(PLUGIN_DOWNLOAD_URL, PLUGIN_STORE_URL);

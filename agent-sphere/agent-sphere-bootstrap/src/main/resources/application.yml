@@ -60,11 +60,18 @@ buukle:
   agent:
     # ============================================================
     # 会话配置 / Session Config
+    # cleanup-* 是历史会话清理（SessionCleanupTask）的技术参数。
+    # 保留天数与急停开关在系统配置表（config_group='session'，见 SystemConfigKeys），改完不必发版。
+    # 清理是硬删、不可逆：逻辑删除不释放磁盘，大字段仍留在堆表里。
     # ============================================================
     session:
       idle-timeout: 30m                            # 会话空闲超时 / Session idle timeout
       max-concurrent-runs: 10                      # 最大并发执行数 / Max concurrent runs
       cache-ttl: 60m                               # 上下文缓存存活时间 / Context cache TTL
+      cleanup-cron: "0 30 4 * * ?"                 # 历史会话清理cron（低峰期）/ Session cleanup cron
+      cleanup-batch-size: 200                      # 清理每批处理的会话数 / Sessions per cleanup batch
+      cleanup-max-batches: 50                      # 清理单轮批次上限（级联与独立清理共用）/ Max batches per cleanup run
+      cleanup-batch-sleep-ms: 200                  # 清理批间休眠，让位给 autovacuum / Sleep between cleanup batches
 
     # ============================================================
     # 步骤配置 / Step Config

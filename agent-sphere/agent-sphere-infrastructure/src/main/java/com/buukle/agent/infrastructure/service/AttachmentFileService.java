@@ -1,5 +1,6 @@
 package com.buukle.agent.infrastructure.service;
 
+import com.buukle.agent.common.constant.FileStoreBizKeys;
 import com.buukle.agent.infrastructure.controller.dtvo.AttachmentUploadResult;
 import com.buukle.agent.infrastructure.file.GenericFileService;
 import com.buukle.agent.infrastructure.file.StoredFile;
@@ -21,7 +22,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AttachmentFileService {
 
-    public static final String BIZ_KEY = "chat-attachment";
+    /** 见 {@link FileStoreBizKeys#CHAT_ATTACHMENT}；保留本字段以免改动既有调用点 */
+    public static final String BIZ_KEY = FileStoreBizKeys.CHAT_ATTACHMENT;
     private static final long MAX_IMAGE_SIZE_BYTES = 5L * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp", "image/gif");

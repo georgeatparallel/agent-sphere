@@ -468,6 +468,7 @@ export default {
     '入参 JSON Schema (parameters)',
   'pages.admin.settings.template.skill.parametersHint': '可留空=空对象',
   'pages.admin.settings.group.sso': '单点登录',
+  'pages.admin.settings.group.session': '会话数据清理',
   'pages.admin.settings.plugin.upload.btn': '上传安装包',
   'pages.admin.settings.plugin.upload.success': '上传成功',
   'pages.admin.settings.plugin.delete.btn': '删除',

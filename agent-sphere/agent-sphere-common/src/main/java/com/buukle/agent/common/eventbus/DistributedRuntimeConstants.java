@@ -32,6 +32,14 @@ public final class DistributedRuntimeConstants {
     /** AES 密钥初始化原子占位键（`SET NX`）。 */
     public static final String KEY_AES_KEY_INIT = "crypto:aes-key:init";
 
+    /**
+     * Timeline 序号分配器键前缀（RAtomicLong，per session）。
+     *
+     * <p>刻意用 {@code agent:} 而非 {@code runtime:}：它随 session 生命周期存在但不属于运行态，
+     * 历史会话清理任务需要按 sessionId 显式删除它 —— 该键<b>没有 TTL</b>，不删就永久残留。
+     */
+    public static final String KEY_TIMELINE_SEQ_PREFIX = "agent:timeline:seq:";
+
     private DistributedRuntimeConstants() {
     }
 
@@ -73,5 +81,9 @@ public final class DistributedRuntimeConstants {
 
     public static String userEventCacheKey(String username) {
         return KEY_EVENT_CACHE_USER_PREFIX + username;
+    }
+
+    public static String timelineSeqKey(Long sessionId) {
+        return KEY_TIMELINE_SEQ_PREFIX + sessionId;
     }
 }

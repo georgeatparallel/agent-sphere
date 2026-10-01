@@ -23,6 +23,7 @@ const GROUP_LABELS: Record<string, string> = {
   sso: 'pages.admin.settings.group.sso',
   user: 'pages.admin.settings.group.user',
   llm: 'pages.admin.settings.group.llm',
+  session: 'pages.admin.settings.group.session',
 };
 
 export default function AdminSettings() {

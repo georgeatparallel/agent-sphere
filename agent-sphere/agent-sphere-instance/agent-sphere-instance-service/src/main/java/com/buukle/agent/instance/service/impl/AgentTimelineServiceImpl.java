@@ -2,6 +2,7 @@ package com.buukle.agent.instance.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.buukle.agent.common.eventbus.DistributedRuntimeConstants;
 import com.buukle.agent.instance.domain.AgentLlmInteractionRecord;
 import com.buukle.agent.instance.domain.AgentPendingClarification;
 import com.buukle.agent.instance.domain.AgentRun;
@@ -50,7 +51,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 public class AgentTimelineServiceImpl extends ServiceImpl<AgentTimelineMapper, AgentTimeline>
         implements AgentTimelineSpi {
 
-    private static final String TIMELINE_SEQ_KEY = "agent:timeline:seq:";
     /** 单字段正文加载上限（超长截断，避免单页过载；不落库）。 */
     private static final int CONTENT_CAP = 20000;
     /** 快照标签上限。 */
@@ -70,7 +70,7 @@ public class AgentTimelineServiceImpl extends ServiceImpl<AgentTimelineMapper, A
         if (sessionId == null) {
             throw new IllegalArgumentException("sessionId required");
         }
-        return redissonClient.getAtomicLong(TIMELINE_SEQ_KEY + sessionId).incrementAndGet();
+        return redissonClient.getAtomicLong(DistributedRuntimeConstants.timelineSeqKey(sessionId)).incrementAndGet();
     }
 
     @Override

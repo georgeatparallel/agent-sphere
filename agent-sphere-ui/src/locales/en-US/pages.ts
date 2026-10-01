@@ -489,6 +489,7 @@ export default {
   'pages.admin.settings.template.skill.parametersHint':
     'May be empty (empty object)',
   'pages.admin.settings.group.sso': 'SSO',
+  'pages.admin.settings.group.session': 'Session Data Cleanup',
   'pages.admin.settings.plugin.upload.btn': 'Upload Package',
   'pages.admin.settings.plugin.upload.success': 'Uploaded',
   'pages.admin.settings.plugin.delete.btn': 'Delete',

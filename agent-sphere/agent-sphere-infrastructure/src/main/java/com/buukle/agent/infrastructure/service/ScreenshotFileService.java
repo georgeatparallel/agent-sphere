@@ -1,5 +1,6 @@
 package com.buukle.agent.infrastructure.service;
 
+import com.buukle.agent.common.constant.FileStoreBizKeys;
 import com.buukle.agent.infrastructure.controller.dtvo.ScreenshotUploadResult;
 import com.buukle.agent.infrastructure.file.GenericFileService;
 import com.buukle.agent.infrastructure.file.StoredFile;
@@ -20,7 +21,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ScreenshotFileService {
 
-    public static final String BIZ_KEY = "browser-screenshot";
+    /** 见 {@link FileStoreBizKeys#BROWSER_SCREENSHOT}；保留本字段以免改动既有调用点 */
+    public static final String BIZ_KEY = FileStoreBizKeys.BROWSER_SCREENSHOT;
     private static final long MAX_SCREENSHOT_BYTES = 8L * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp");

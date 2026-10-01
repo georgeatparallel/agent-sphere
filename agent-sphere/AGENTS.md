@@ -64,7 +64,21 @@ Env overrides (defaults): `DB_HOST` (127.0.0.1), `DB_PORT` (5432), `DB_USERNAME`
 
 ## Flyway
 
-Migrations: `agent-sphere-bootstrap/src/main/resources/db/migration/V<n>__desc.sql` (currently V1–V5; check the directory for the current highest number before adding a new one). `baseline-on-migrate: true`, baseline 0. Add new `V<n>` files; never edit applied migrations.
+Migrations: `agent-sphere-bootstrap/src/main/resources/db/migration/V<n>__desc.sql` (currently V1–V75; check the directory for the current highest number before adding a new one). `baseline-on-migrate: true`, baseline 0. Add new `V<n>` files; never edit applied migrations.
+
+## Session data cleanup (disk reclamation)
+
+`SessionCleanupTask` (`instance-service/service/impl`) hard-deletes expired session data on a cron so the DB stops growing. Companion SQL lives in `SessionCleanupMapper` (`instance-repository`) — a **raw-SQL mapper that extends nothing**: it must reach `agent_task` / `agent_completions_call` / `agent_file_store`, which belong to other modules, and `infrastructure` already depends on `instance-service`, so instance must not depend back.
+
+- **Hard delete, deliberately.** This is the one sanctioned exception to "never hard-delete": `agent_llm_interaction_record` stores full request/response/reasoning TEXT, so `@TableLogic` (`UPDATE delete_flag=1`) leaves every byte on disk. Cleanup SQL therefore bypasses MyBatis-Plus on purpose, and deliberately does **not** filter on `delete_flag` — already-logically-deleted rows occupy space too.
+- **Delete order is a foreign-key contract.** Only two real FKs exist and neither has `ON DELETE CASCADE`: `agent_run.session_id → agent_session` and `agent_task_artifact.task_id → agent_task`. Method order in the mapper == execution order; `SessionCleanupTaskTest` asserts it with `InOrder`. Reordering breaks production with `violates foreign key constraint`.
+- **Expiry = `agent_session.created_at < cutoff AND updated_at < cutoff`**, plus two `NOT EXISTS` guards for `PENDING`/`RUNNING` runs and `QUEUED`/`RUNNING` tasks (a long Bole task only updates `task`/`run` rows, never the session row, so time alone is not enough). `AWAITING_USER` is intentionally **not** guarded — a clarification nobody answers would block cleanup forever.
+- **Multi-replica**: `k8s/05-backend.yaml` has `replicas: 2`, so the job takes the Redisson lock `scheduler:session-cleanup` (same pattern as `AuditLogCleanupTask`).
+- **Config split**: retention days + kill switch live in `agent_system_config` (`config_group='session'`, keys in `SystemConfigKeys`, seeded by `V75`); cron/batch size/sleep live in `application.yml` under the existing `buukle.agent.session` block. Change retention without a redeploy.
+- **Indexes**: `V74` adds the ones cleanup needs (`agent_session(delete_flag,created_at)`, `agent_task(session_id)`, …). Without them the driving query seq-scans.
+- **Manual trigger**: `POST /api/v1/instance/session-cleanup` (permission `admin:settings:update`), `dryRun` defaults to **true**. It is synchronous and can take minutes — that is intended, so the caller gets the report back.
+- **Disk is not returned to the OS.** Hard delete only frees space for reuse inside PG; the data files stay the same size. The job logs a `VACUUM (FULL, ANALYZE)` hint instead of running it (ACCESS EXCLUSIVE lock).
+- Sibling job `AuditLogCleanupTask` stays in `infrastructure/config` — audit logs are that module's domain; only session cleanup moved.
 
 ## MyBatis-Plus
 
