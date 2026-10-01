@@ -1,6 +1,8 @@
 # 本地 CI（.local-workflow）
 
-在本地复刻 `.github/workflows/deploy.yml` 的全流程：构建推送三镜像 → 改 k8s 镜像 tag 并推 main → 自动递增版本号、打包 Chrome 扩展、建 GitHub Release。**GitHub Action 慢时用它替代**；`.env` / `.cache/` / `output/` 已 gitignore。
+在本地复刻 `.github/workflows/deploy.yml` 的主流程：构建推送三镜像 → 改 k8s 镜像 tag 并推 main（**默认不打 tag**）。需要版本发布时加 `--tag`：自动递增 `v1.0.NN-alpha`、打包 Chrome 扩展、建 GitHub Release。**GitHub Action 慢时用它替代**；`.env` / `.cache/` / `output/` 已 gitignore。
+
+> 默认 `--no-tag`：本地 CI 与 tag 触发的 Action 会重复构建/改 k8s，故默认只发镜像 + 提交 k8s；`--tag` 才发布版本。
 
 ## 为什么要它
 
@@ -25,17 +27,17 @@ cp .local-workflow/.env.example .local-workflow/.env
 ## 命令
 
 ```bash
-# 完整发版：镜像 → k8s tag 提交 → v1.0.NN-alpha → 扩展包 → Release
+# 默认：镜像 → k8s tag 提交（不打 tag，避免与 tag 触发的 Action 双跑）
 ./.local-workflow/deploy.sh
+
+# 版本发布：额外自动递增并 push v1.0.NN-alpha + 扩展包 + Release
+./.local-workflow/deploy.sh --tag
 
 # 先看会做什么，不动任何文件（不 build / 不 push / 不打 tag）
 ./.local-workflow/deploy.sh --dry-run
 
 # 上次失败，重跑：镜像已在 ACR 就跳过重建推送
 ./.local-workflow/deploy.sh --skip-existing
-
-# 只发后端镜像 + k8s 提交，不发 Release
-./.local-workflow/deploy.sh --no-tag
 
 # 只重建 widget 镜像
 ./.local-workflow/deploy.sh --only widget
@@ -50,7 +52,8 @@ cp .local-workflow/.env.example .local-workflow/.env
 | `-y, --yes` | 跳过所有交互确认 |
 | `--skip-existing` | `docker manifest inspect` 命中则跳过该组件的构建推送 |
 | `--only <list>` | 逗号分隔：`backend,frontend,widget` |
-| `--no-tag` | 只发镜像与 k8s 提交，不打 tag、不打包扩展、不建 Release |
+| `--tag` | 发布版本：自动递增并 push `v1.0.NN-alpha`、打扩展包、建 Release（默认关闭） |
+| `--no-tag` | 只发镜像与 k8s 提交（默认行为；保留以显式声明） |
 | `--platform <p>` | 覆盖构建平台（默认 arm64 宿主自动 `linux/amd64`） |
 
 日志落在 `.local-workflow/output/deploy-<ts>.log`（`--dry-run` 不写日志文件）。
@@ -59,7 +62,7 @@ cp .local-workflow/.env.example .local-workflow/.env
 
 | deploy.yml | deploy.sh |
 | --- | --- |
-| checkout `ref: main`, `fetch-depth: 0` | 要求当前分支 = `main` 且工作树干净（更严：脏树直接拒绝） |
+| checkout `ref: main`, `fetch-depth: 0` | 要求当前分支 = `main`、工作树干净，且**本地 main == origin/main**（不同步直接拒绝，避免脚本内 rebase 冲突） |
 | `docker/setup-buildx-action` | `step_buildx`：内置 `docker` driver 不支持 `cache-to type=local`，自动建 `as-builder`（docker-container driver） |
 | `docker/login-action` | `docker login --password-stdin`（密码不进 argv） |
 | `cache-from/to: type=gha` | `type=local`，落 `.local-workflow/.cache/<组件名>` |
@@ -91,7 +94,7 @@ docker buildx use as-builder
 `.local-workflow/.cache/{backend,frontend,widget}` 是 buildx 缓存目录，别删。删了会重新拉全量依赖（backend 尤其慢）。要清就整个删。
 
 **`pull --rebase` 冲突**
-脚本会停下来并提示，此时手动 `git rebase --abort`，处理完 `git pull --rebase origin main && git push`，再带 `--only <未成功的组件>` 重跑。
+正常不会发生：preflight 已强校验本地 `main` == `origin/main`，不同步直接拒绝。若仍在 `step_commit` 撞上（远端在你发版期间被别的提交推进），脚本会**自动 `git rebase --abort`** 并退出，不会留下半成品现场；手动 `git pull --rebase origin main && git push` 后带 `--skip-existing`（镜像已推送）重跑即可。
 
 **tag 已存在**
 版本号是自动递增的，正常不会撞。撞了说明上次跑了一半：删掉本地和远端的 `v1.0.NN-alpha`（或用该 tag 建 Release），或 `--no-tag` 只发镜像。

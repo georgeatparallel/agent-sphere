@@ -74,7 +74,7 @@ fi
 DRY_RUN=0
 ASSUME_YES=0
 SKIP_EXISTING=0
-NO_TAG=0
+NO_TAG=1                # 默认不打 tag（避免与 tag 触发的 GitHub Action 双跑）；--tag 开启
 ONLY=""                # 空 = 三个全建；否则 " backend widget " 形式
 PLATFORM=""            # 空 = 自动探测（arm64 宿主补 linux/amd64）
 
@@ -177,13 +177,13 @@ resolve_registry() {
   ACR_REGISTRY="${ACR_REGISTRY%/}"
 }
 
-load_github_token() {
+resolve_github_token() {
   if [ -n "${GITHUB_TOKEN:-}" ]; then
     ok "GITHUB_TOKEN 来自环境变量"
     return 0
   fi
   local cfg="${REPO_ROOT}/local-config/token.json"
-  [ -f "${cfg}" ] || die "缺少 GitHub token：设置 GITHUB_TOKEN 环境变量，或准备 ${cfg}"
+  [ -f "${cfg}" ] || return 1
   GITHUB_TOKEN="$(node -p "require('${cfg}').github.token" 2>/dev/null || true)"
   [ -n "${GITHUB_TOKEN}" ] || die "无法从 ${cfg} 解析 github.token"
   ok "GITHUB_TOKEN 来自 local-config/token.json"
@@ -201,7 +201,7 @@ setup_askpass() {
     echo '#!/bin/sh'
     echo 'case "$1" in'
     echo '  *sername*) echo x-access-token ;;'
-    echo '  *) cat "$(dirname "$0")/.token" ;;'
+    echo '  *) cat "$0.token" ;;'
     echo 'esac'
   } > "${ASKPASS_SCRIPT}"
 }
@@ -227,7 +227,8 @@ usage() {
   -y, --yes              跳过所有交互确认
   --skip-existing        目标 sha 镜像在 ACR 已存在则跳过构建推送（重跑用）
   --only <list>          只处理指定组件，逗号分隔：backend,frontend,widget
-  --no-tag               只发镜像与 k8s 提交，不打 tag、不打包扩展、不建 Release
+  --tag                  发布版本：自动递增并 push v1.0.NN-alpha，打扩展包并建 Release（默认关闭）
+  --no-tag               只发镜像与 k8s 提交（默认行为；保留以显式声明）
   --platform <p>         覆盖构建平台（默认：arm64 宿主自动用 linux/amd64）
   -h, --help             显示本帮助
 EOF
@@ -239,7 +240,8 @@ parse_args() {
       --dry-run)       DRY_RUN=1 ;;
       -y|--yes)        ASSUME_YES=1 ;;
       --skip-existing) SKIP_EXISTING=1 ;;
-      --no-tag)        NO_TAG=1 ;;
+      --tag)           NO_TAG=0 ;;
+      --no-tag)        NO_TAG=1 ;;   # 默认行为，保留以显式声明
       --only)          [ $# -ge 2 ] || die "--only 需要参数"; ONLY="$2"; shift ;;
       --only=*)        ONLY="${1#*=}" ;;
       --platform)      [ $# -ge 2 ] || die "--platform 需要参数"; PLATFORM="$2"; shift ;;
@@ -261,9 +263,6 @@ parse_args() {
     ONLY=" ${ONLY//,/ } "
   fi
 
-  if [ "${DRY_RUN}" -eq 1 ] && [ "${NO_TAG}" -eq 1 ]; then
-    die "--dry-run 与 --no-tag 同时给出没有意义"
-  fi
 }
 
 selected_components() {
@@ -348,9 +347,32 @@ step_preflight() {
   IMAGE_TAG="sha-${SRC_SHA:0:7}"
   ok "源码提交 ${SRC_SHA} → 镜像 tag ${IMAGE_TAG}"
 
-  if [ "${NO_TAG}" -eq 0 ]; then
-    [ -n "${GITHUB_REPO}" ] || GITHUB_REPO="nullpointexception-i/agent-sphere"
-    load_github_token
+  [ -n "${GITHUB_REPO}" ] || GITHUB_REPO="nullpointexception-i/agent-sphere"
+
+  # 发版前强校验本地 main 与 origin/main 同步：否则脚本内的 pull --rebase 会重放
+  # 本地分叉提交并可能冲突，把工作副本留在半成品 rebase 现场（踩过：.gitignore 冲突）。
+  if resolve_github_token; then
+    setup_askpass
+    if GIT_ASKPASS="${ASKPASS_SCRIPT}" GIT_TERMINAL_PROMPT=0 \
+       git fetch "$(repo_url)" main 2>&1 | sed 's/^/     /'; then
+      local remote_head
+      remote_head="$(git rev-parse FETCH_HEAD)"
+      if [ "$(git rev-parse HEAD)" = "${remote_head}" ]; then
+        ok "本地 main 与 origin/main 一致（$(git rev-parse --short HEAD)）"
+      elif [ "${DRY_RUN}" -eq 1 ]; then
+        warn "本地 main 与 origin/main 不一致（dry-run 继续）：本地 $(git rev-parse --short HEAD) / 远端 $(git rev-parse --short FETCH_HEAD)"
+      else
+        die "本地 main 与 origin/main 不一致（本地 $(git rev-parse --short HEAD) / 远端 $(git rev-parse --short FETCH_HEAD)）。请先 git pull --rebase 同步 main 后再发版，避免脚本内 rebase 冲突"
+      fi
+    elif [ "${DRY_RUN}" -eq 1 ]; then
+      warn "fetch origin/main 失败（dry-run 跳过同步校验）"
+    else
+      die "fetch origin/main 失败，请检查网络 / GITHUB_TOKEN"
+    fi
+  elif [ "${DRY_RUN}" -eq 1 ]; then
+    warn "未找到 GitHub token：dry-run 跳过同步校验（真实执行 push main 必需）"
+  else
+    die "缺少 GitHub token：设置 GITHUB_TOKEN 环境变量，或准备 local-config/token.json"
   fi
   return 0
 }
@@ -493,9 +515,12 @@ step_commit() {
   setup_askpass
   GIT_ASKPASS="${ASKPASS_SCRIPT}" GIT_TERMINAL_PROMPT=0 \
     git fetch "$(repo_url)" main 2>&1 | sed 's/^/     /' || warn "fetch 失败，继续尝试 push"
-  GIT_ASKPASS="${ASKPASS_SCRIPT}" GIT_TERMINAL_PROMPT=0 \
-    git pull --rebase "$(repo_url)" main 2>&1 | sed 's/^/     /' \
-    || die "pull --rebase 失败，请手动处理后重跑"
+  if ! GIT_ASKPASS="${ASKPASS_SCRIPT}" GIT_TERMINAL_PROMPT=0 \
+       git pull --rebase "$(repo_url)" main 2>&1 | sed 's/^/     /'; then
+    # 不把工作副本留在半成品 rebase 现场：abort 后交还人工处理
+    git rebase --abort >/dev/null 2>&1 || true
+    die "pull --rebase 冲突，已自动 abort。请手动 git pull --rebase origin main 解决后重跑（镜像已推送，可加 --skip-existing）"
+  fi
   git_push_url HEAD:main
   ok "已推送 main（$(git rev-parse --short HEAD)）"
   return 0
@@ -517,7 +542,7 @@ bump_version() {
 
 step_tag() {
   if [ "${NO_TAG}" -eq 1 ]; then
-    warn "--no-tag：跳过打 tag / 扩展打包 / Release"
+    warn "未启用 tag（默认 no-tag；加 --tag 开启）：跳过打 tag / 扩展打包 / Release"
     return 0
   fi
 
