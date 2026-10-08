@@ -97,8 +97,9 @@ mvn -pl agent-sphere-bootstrap test -Dtest=ParallelSearchAgentLoopTest -Dparalle
 `ParallelSearchAgentLoopTest` loads `mcp.json` through the real MCP service,
 creates an instance binding through the real binding service, and uses
 `ContextPreparer`, `SessionRunner`, `KernelLlmService` and `ToolExecutor` without
-replacing their dispatch logic. Mapper persistence, Redis state and the model
-provider are fixtures. The controlled model chooses a fetch URL from the preceding
+replacing their dispatch logic. Mapper persistence, Redis state, the model
+provider and ancillary session services (including input, history and run storage)
+are fixtures. The controlled model chooses a fetch URL from the preceding
 search result and builds its final reply from the fetch result; assertions check
 tool-call IDs and the assistant/tool message sequence at the next model boundary.
 The local HTTP fixture observes the endpoint, User-Agent and absence of credentials

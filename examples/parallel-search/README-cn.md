@@ -58,7 +58,8 @@ mvn -pl agent-sphere-bootstrap test -Dtest=ParallelSearchAgentLoopTest -Dparalle
 
 新测试通过真实 MCP 服务加载 `mcp.json`，通过真实实例绑定服务建立绑定，再运行
 `ContextPreparer`、`SessionRunner`、`KernelLlmService` 和 `ToolExecutor`。
-只替换 mapper 持久化、Redis 状态和模型供应商。受控模型读取搜索结果中的 URL 发起
+mapper 持久化、Redis 状态、模型供应商及会话输入、历史和运行记录等外围服务使用
+测试替身，核心工具发现和调度逻辑保持真实。受控模型读取搜索结果中的 URL 发起
 抓取，并根据抓取结果生成最终回复；断言验证下一次模型请求中的工具调用 ID 和
 assistant/tool 消息顺序。本地 HTTP 服务检查发现、搜索和抓取的端点、User-Agent
 及无凭证请求，禁用绑定测试验证不产生 MCP 请求。显式实时测试使用示例中的匿名端点
