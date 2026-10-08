@@ -54,6 +54,7 @@ fi
 DRY_RUN=0
 ASSUME_YES=0
 SKIP_EXISTING=0
+SKIP_VERIFY=0
 NO_COMMIT=0
 NO_PULL=0
 FORCE_WRONG_ARCH=0
@@ -200,7 +201,8 @@ usage() {
   --dry-run              只打印将要做什么（不 pull/tag/push、不改文件、不提交）
   -y, --yes              跳过所有交互确认
   --only <list>          只处理指定镜像，逗号分隔（默认：k8s 里所有非 ACR 镜像）
-  --skip-existing        ACR 已有相同 digest 则跳过推送
+  --skip-existing        ACR 已有相同 digest 则跳过推送（仍会校验架构）
+  --skip-verify          跳过推送后的架构复核（省掉一次拉回下载）
   --platform <p>         目标架构（默认：linux/amd64，k3s 节点就是 amd64）
   --no-pull              完全离线：只用本地镜像，架构不符直接报错（不自动重拉）
   --force-wrong-arch     明知架构不符也推（应急，默认禁止）
@@ -215,6 +217,7 @@ parse_args() {
       --dry-run)       DRY_RUN=1 ;;
       -y|--yes)        ASSUME_YES=1 ;;
       --skip-existing) SKIP_EXISTING=1 ;;
+      --skip-verify)    SKIP_VERIFY=1 ;;
       --no-commit)     NO_COMMIT=1 ;;
       --no-pull)       NO_PULL=1 ;;
       --force-wrong-arch) FORCE_WRONG_ARCH=1 ;;
@@ -362,21 +365,55 @@ ensure_platform() {
 }
 
 # 推送后复核：ACR 里这个 tag 到底是不是目标架构。
+#
+# 三条路径，原则是「拿到确凿反证才 die，拿不到证据只 warn」——
+# 早先版本用 `imagetools inspect | grep amd64` 判定，对单 manifest 镜像会误报：
+# imagetools inspect 只有在 ref 是多架构 index 时才输出 Platform 行，单 manifest
+# （普通 docker tag + push 的产物）输出仅 Name/MediaType/Digest 三行，压根没有平台信息。
 verify_pushed_arch() {
-  local target="$1" want out
+  local target="$1" want out have
   want="$(target_arch_name)"
-  out="$(docker buildx imagetools inspect "${target}" 2>/dev/null || true)"
-  if [ -z "${out}" ]; then
-    warn "无法用 imagetools inspect 校验 ${target}（buildx 版本或网络问题）。请人工确认：docker buildx imagetools inspect ${target}"
+
+  if [ "${SKIP_VERIFY}" -eq 1 ]; then
+    warn "--skip-verify：跳过 ${target} 的架构复核"
     return 0
   fi
-  if printf '%s' "${out}" | grep -qi "${want}"; then
-    ok "${target} 已确认含 ${want}"
-  else
-    err "${target} 里没找到 ${want} 架构！线上 Pod 会 exec format error。"
+
+  # 快路径：输出里有 Platform 行 ⇒ 是 index，直接比对平台列表
+  out="$(docker buildx imagetools inspect "${target}" 2>/dev/null || true)"
+  if [ -n "${out}" ] && printf '%s\n' "${out}" | grep -qE '^[[:space:]]*Platform:'; then
+    if printf '%s\n' "${out}" | grep -qE "^[[:space:]]*Platform:[[:space:]]*(linux/)?${want}([[:space:]]|/|$)"; then
+      ok "${target} 已确认含 ${want}（index 平台列表）"
+      return 0
+    fi
+    err "${target} 是多架构镜像但不含 ${want}！线上 Pod 会 exec format error。"
+    dim "实际平台列表："
+    printf '%s\n' "${out}" | grep -E '^[[:space:]]*Platform:' | sed 's/^/       /' >&2
     die "架构校验失败。先确认 k3s 节点架构（kubectl get nodes -o wide），再用正确的 --platform 重推。"
   fi
-  return 0
+
+  # 权威路径：index 才有平台列表，单 manifest 只能拉回来看。
+  # 顺带证明了 ACR 真的拉得到 —— 这正是节点侧需要的能力。
+  log "从 ACR 拉回 ${target} 校验架构"
+  if ! docker pull --platform "${PLATFORM}" "${target}" > "${OUTPUT_DIR}/mirror-verify-pull.log" 2>&1; then
+    warn "从 ACR 拉回 ${target} 失败，无法判定架构（不影响镜像本身已推送成功）"
+    dim "拉取日志：${OUTPUT_DIR}/mirror-verify-pull.log"
+    dim "人工确认： docker pull ${target} && docker image inspect --format '{{.Os}}/{{.Architecture}}' ${target}"
+    return 0
+  fi
+  have="$(local_arch "${target}")"
+  if [ -z "${have}" ]; then
+    warn "拉回后仍读不出 ${target} 的架构，跳过校验（无反证，不阻塞）"
+    return 0
+  fi
+  if [ "${have}" = "${want}" ]; then
+    ok "${target} 拉回校验：${have} ✓（单 manifest 镜像在 registry 侧无平台信息，只能这样判）"
+    return 0
+  fi
+  err "${target} 拉回后是 ${have}，k3s 节点要 ${want}！线上 Pod 会 exec format error。"
+  dim "imagetools inspect 原始输出（无 Platform 行 = 单 manifest 镜像）："
+  [ -n "${out}" ] && printf '%s\n' "${out}" | sed 's/^/       /' >&2
+  die "架构校验失败。k3s 节点要 ${want}，重跑本脚本（不加 --skip-existing）让它按 ${PLATFORM} 重拉后重推。"
 }
 
 remote_digest() {
@@ -404,12 +441,14 @@ mirror_one() {
   tag="${nt##* }"
 
   if [ "${DRY_RUN}" -eq 0 ]; then
-    # 先判跳过，再考虑架构：已经决定跳过就不该白拉一次镜像
+    # 先判跳过，再考虑架构：已经决定跳过就不该白拉一次镜像。
+    # 但跳过推送 ≠ 跳过校验 —— 镜像可能是上次推的，仍要确认它对得上节点架构。
     if [ "${SKIP_EXISTING}" -eq 1 ]; then
       local existing
       existing="$(remote_digest "${target}")"
       if [ -n "${existing}" ]; then
         ok "ACR 已有 ${target}（${existing}），--skip-existing 跳过推送"
+        verify_pushed_arch "${target}"
         return 0
       fi
     fi
@@ -518,7 +557,7 @@ step_preflight() {
   [ "${missing}" -eq 0 ] || exit 1
 
   command -v docker >/dev/null 2>&1 && docker buildx version >/dev/null 2>&1 \
-    || warn "buildx 不可用，推送后的架构复核会退化为警告"
+    || warn "buildx 不可用：推送后的架构复核会退回「拉回 ACR 再本地判定」（慢一些，但更权威）"
 
   [ -n "${ACR_USERNAME}" ] && [ -n "${ACR_PASSWORD}" ] || die "未配置 ACR_USERNAME / ACR_PASSWORD"
   [ -n "${ACR_REGISTRY}" ] || die "未配置 ACR_REGISTRY"

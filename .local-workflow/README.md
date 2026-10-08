@@ -81,7 +81,8 @@ cp .local-workflow/.env.example .local-workflow/.env
 | `--dry-run` | 只打印计划，**不 pull/tag/push、不改文件、不提交** |
 | `-y, --yes` | 跳过所有交互确认 |
 | `--only <list>` | 逗号分隔的镜像名，如 `postgres,redis`（默认：k8s 里所有非 ACR 镜像） |
-| `--skip-existing` | ACR 里该 tag 已有 digest 就跳过推送（此时也不会去 pull） |
+| `--skip-existing` | ACR 里该 tag 已有 digest 就跳过推送（此时也不会去 pull；**仍会校验架构**，因为镜像可能是上次推的） |
+| `--skip-verify` | 跳过推送后的架构复核（省掉一次从 ACR 拉回的下载） |
 | `--platform <p>` | 目标架构，默认 `linux/amd64`（k3s 节点就是 amd64） |
 | `--no-pull` | 完全离线：只用本地镜像，架构不符直接报错（不自动重拉） |
 | `--force-wrong-arch` | 明知架构不符也推（应急，默认禁止） |
@@ -94,9 +95,31 @@ cp .local-workflow/.env.example .local-workflow/.env
 **架构是第一号坑**：k3s 节点是 amd64，Mac arm64 上 `docker images` 里的 `postgres:16-alpine` 是 arm64，直接推上去线上 Pod 会 `exec format error`。脚本两道防线：
 
 1. 推送前 `docker image inspect` 查本地架构，不符就 `docker pull --platform linux/amd64` 重拉；拉不到直接中止，**绝不推错架构**
-2. 推送后 `docker buildx imagetools inspect` 复核 ACR 里确实含 `amd64`，不符则报错且**不改 k8s 文件**
+2. 推送后复核 ACR 里确实是 `amd64`，不符则报错且**不改 k8s 文件**（详见下面的「推送后怎么复核架构」）
 
 > ⚠️ Docker Desktop 用经典镜像存储（非 containerd）时，同一 tag 只能留一个架构变体，重拉可能仍是 arm64 —— 脚本会检测并报错，此时在 amd64 机器上跑或改用 `--platform`。
+
+### 推送后怎么复核架构
+
+`docker buildx imagetools inspect` **只有在 ref 是多架构 index 时才输出 `Platform:` 行**。普通 `docker tag` + `docker push` 推上去的是**单 manifest** 镜像，输出只有三行，压根没有平台信息：
+
+```
+Name:      crpi-.../postgres:16-alpine
+MediaType: application/vnd.docker.distribution.manifest.v2+json
+Digest:    sha256:...
+```
+
+所以不能靠 `imagetools inspect | grep amd64` 判断 —— 那样对单 manifest 镜像必然误报。脚本分两步：
+
+| 情况 | 判定方式 |
+| --- | --- |
+| 输出含 `Platform:` 行（多架构 index） | 直接比对平台列表，不符则报错 |
+| 无 `Platform:` 行（单 manifest） | **从 ACR 拉回来**再 `docker image inspect` 判架构 |
+| 两步都拿不到（buildx 不可用 / 拉不回来） | 只告警并给出人工确认命令，**不阻塞** |
+
+原则是**拿到确凿反证才中止，拿不到证据只告警**。拉回校验顺带证明了「ACR 真的拉得到」—— 这正是 k3s 节点侧需要的能力。
+
+校验日志落在 `.local-workflow/output/mirror-verify-pull.log`；确实不想下载（postgres 约 130MB）时用 `--skip-verify`。
 
 **ACR 推送 403**：阿里云要求镜像仓库先在控制台创建。报错时脚本会直接告诉你去 ACR 控制台 → 命名空间 `nullpointexception-i` → 新建镜像仓库 → 名称 `postgres` / `redis`（类型选「本地仓库」）。仓库已存在则是账号缺该命名空间的 push 权限。
 

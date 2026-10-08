@@ -69,7 +69,7 @@ cp .local-workflow/.env.example .local-workflow/.env   # 填 ACR_USERNAME / ACR_
 ./.local-workflow/mirror-middleware-images.sh             # 完整执行
 ```
 
-- **架构是头号坑**：k3s 节点 amd64，arm64 宿主本地镜像是 arm64，推上去线上 `exec format error`。两道防线——推送前 `image inspect` 校验（不符则 `pull --platform linux/amd64` 重拉，拉不到即中止），推送后 `buildx imagetools inspect` 复核 ACR 内架构（不符则报错且**不改 k8s**）。
+- **架构是头号坑**：k3s 节点 amd64，arm64 宿主本地镜像是 arm64，推上去线上 `exec format error`。两道防线——推送前 `image inspect` 校验（不符则 `pull --platform linux/amd64` 重拉，拉不到即中止），推送后复核 ACR 内架构（不符则报错且**不改 k8s**）。复核不能靠 `imagetools inspect | grep amd64`：`Platform:` 行只有多架构 index 才有，普通 `tag`+`push` 的单 manifest 镜像输出只有 Name/MediaType/Digest，会**误报**；单 manifest 靠从 ACR 拉回后 `docker image inspect` 判定（顺带验证 ACR 拉得到）。拿不到证据只告警，拿到反证才中止。
 - **只扫 `k8s/`**：`agent-sphere/agent-docker-middleware/docker-compose.yml` 引用同名官方镜像但那是本地开发用的，必须保持指向 Docker Hub。
 - **不加 `imagePullPolicy`**（最小 diff）：节点默认 `IfNotPresent`，重推同 tag 不自动生效，需 `kubectl -n agent-sphere rollout restart deploy/postgres`。
 - ACR 403 多半是命名空间 `nullpointexception-i` 下还没建 `postgres`/`redis` 镜像仓库（阿里云要求先在控制台创建）；脚本会把 403 翻译成可照做的提示。
