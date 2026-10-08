@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:16-alpine
+        image: crpi-beo82etap5e8va9b.cn-wulanchabu.personal.cr.aliyuncs.com/nullpointexception-i/postgres:16-alpine
         ports:
         - containerPort: 5432
         env:

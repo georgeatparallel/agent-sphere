@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: redis
-        image: redis:7-alpine
+        image: crpi-beo82etap5e8va9b.cn-wulanchabu.personal.cr.aliyuncs.com/nullpointexception-i/redis:7-alpine
         ports:
         - containerPort: 6379
         readinessProbe:
