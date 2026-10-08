@@ -60,6 +60,21 @@ cp .local-workflow/.env.example .local-workflow/.env   # 填 ACR_USERNAME / ACR_
 - 三个镜像**每次全部重建推送**（`--skip-existing` / `--only` 可裁剪）。buildx 必须是 `docker-container` driver 才支持 `cache-to type=local`，脚本会自动建 `as-builder`。arm64 宿主自动加 `--platform linux/amd64`（k3s 节点是 amd64）。
 - 本地 CI **不含 lint / test / typecheck**，改代码仍按各项目约定自测（见下）。
 
+### 中间件镜像镜像化 — `.local-workflow/mirror-middleware-images.sh`
+
+线上 k3s 拉不到 Docker Hub，`k8s/02-postgres.yaml`（`postgres:16-alpine`）与 `k8s/03-redis.yaml`（`redis:7-alpine`）需要镜像到同一个 ACR。此脚本把本地镜像 tag+push 到 ACR、改写这两处 `image:`、再 commit & push main（`deploy.sh` 的提交清单硬编码了 `05/06/08`，不带这两个文件）。
+
+```bash
+./.local-workflow/mirror-middleware-images.sh --dry-run   # 预演（不 pull/push/改文件/提交）
+./.local-workflow/mirror-middleware-images.sh             # 完整执行
+```
+
+- **架构是头号坑**：k3s 节点 amd64，arm64 宿主本地镜像是 arm64，推上去线上 `exec format error`。两道防线——推送前 `image inspect` 校验（不符则 `pull --platform linux/amd64` 重拉，拉不到即中止），推送后 `buildx imagetools inspect` 复核 ACR 内架构（不符则报错且**不改 k8s**）。
+- **只扫 `k8s/`**：`agent-sphere/agent-docker-middleware/docker-compose.yml` 引用同名官方镜像但那是本地开发用的，必须保持指向 Docker Hub。
+- **不加 `imagePullPolicy`**（最小 diff）：节点默认 `IfNotPresent`，重推同 tag 不自动生效，需 `kubectl -n agent-sphere rollout restart deploy/postgres`。
+- ACR 403 多半是命名空间 `nullpointexception-i` 下还没建 `postgres`/`redis` 镜像仓库（阿里云要求先在控制台创建）；脚本会把 403 翻译成可照做的提示。
+- 详见 `.local-workflow/README.md`。
+
 ## agent-sphere-copilot-widget (chat widget)
 
 Independent package — install/build only from inside `agent-sphere-copilot-widget/`. Stack: Vite 6 (lib mode, IIFE `AgentSphereWidget`), React 19, TypeScript (strict). **No CopilotKit / AG-UI** — chat renders a typed REST+SSE timeline (same shape as the main UI `chat` page).

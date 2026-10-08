@@ -64,7 +64,7 @@ Env overrides (defaults): `DB_HOST` (127.0.0.1), `DB_PORT` (5432), `DB_USERNAME`
 
 ## Flyway
 
-Migrations: `agent-sphere-bootstrap/src/main/resources/db/migration/V<n>__desc.sql` (currently V1–V78; check the directory for the current highest number before adding a new one). `baseline-on-migrate: true`, baseline 0. Add new `V<n>` files; never edit applied migrations.
+Migrations: `agent-sphere-bootstrap/src/main/resources/db/migration/V<n>__desc.sql` (currently V1–V81; check the directory for the current highest number before adding a new one). `baseline-on-migrate: true`, baseline 0. Add new `V<n>` files; never edit applied migrations.
 
 ## Session data cleanup (disk reclamation)
 
@@ -104,6 +104,36 @@ MyBatis only XML-parses the annotation string when it is wrapped in `<script>`, 
 | Any dynamic tag (`<foreach>`, `<if>`, `<choose>`, `<trim>`…) | wrap in `<script>`, and write every `<` as `&lt;` |
 
 `MapperSqlEscapingTest` (bootstrap, source-scanning) enforces both directions across all modules. Note when touching it: it must scan **depth-agnostically** — sub-modules nest one level deep (`agent-sphere/agent-sphere-instance/agent-sphere-instance-repository/src/main/java`), and assuming modules are direct children of the root silently scans almost nothing while still passing.
+
+## Skill Hub auto-update (skill sync)
+
+`SkillSyncRunner` (`capability-skill-service/.../service/impl/SkillSyncRunner.java`) syncs installed
+copies from their origin skill. Replaces the old `SkillAutoUpdateSweeper`.
+
+- **The old scan window was the "no effect" root cause**: it filtered `created_at >= now - 7d`, i.e. by
+  *install* time, so copies installed more than 7 days ago were **never scanned again**. The scan is now
+  just `auto_update = true AND origin_skill_id IS NOT NULL`, which `idx_skill_auto_update(auto_update,
+  origin_skill_id)` matches exactly. `SkillSyncRunnerTest#sweep_queryHasNoTimeWindow` locks this in — do
+  not add a time window back.
+- **Execution records are the only evidence.** The logger is covered by logback's
+  `com.buukle.agent.capability=WARN` rule, so this task's `log.info` never lands in a file (the old
+  sweeper had `if (handled > 0)` on top of that, i.e. silent even when enabled). A single
+  `com.buukle.agent.capability.skill.service.impl.SkillSyncRunner` logger is pinned to INFO in
+  `logback-spring.xml`; every scan also writes one `capability_skill_sync_run` row (`V80`) with
+  scanned/updated/skipped counts plus a per-copy skip detail. Skip reasons are enumerated in
+  `SkillSyncOutcome` — `syncFromOrigin`'s old boolean return could not tell `SOURCE_GONE` from
+  `VERSION_NOT_AHEAD`, which is exactly the question you need answered when nothing synced.
+- **Sync metadata is a display snapshot, separate from the optimistic lock.** `origin_version` is read and
+  rewritten by the conditional UPDATE, so a failed update desyncs it from the UI; `synced_at` /
+  `synced_from_version` (`V79`) are write-once-ish snapshots set on install and on successful sync.
+  Do not collapse the two.
+- Async submit + `scheduler:skill-auto-update` lock + terminal-state bookkeeping come from
+  `AbstractRecordedTask` (in `common`), shared with `SessionCleanupTask`. Its context type is
+  `AbstractRecordedTask<T, C>` because the run context **must** travel as a parameter — the body often
+  runs on a virtual thread, and a field or `ThreadLocal` would silently default there (for the cleanup
+  task that default direction is *actually deleting data*).
+- Manual trigger: `POST /api/v1/capability/skill/sync-now`; poll `GET /sync-runs/{id}`. Both mirrors of
+  the session-cleanup endpoints, and the frontend reuses `useRecordedTask`.
 
 ## Conventions
 

@@ -58,6 +58,58 @@ cp .local-workflow/.env.example .local-workflow/.env
 
 日志落在 `.local-workflow/output/deploy-<ts>.log`（`--dry-run` 不写日志文件）。
 
+## 中间件镜像镜像化（mirror-middleware-images.sh）
+
+线上 k3s 节点拉不到 Docker Hub，但 `k8s/02-postgres.yaml`（`postgres:16-alpine`）和 `k8s/03-redis.yaml`（`redis:7-alpine`）用的就是官方镜像。既然 `deploy.sh` 已经在往同一个 ACR 推镜像，把这两个也镜像过去，节点就只依赖一个 registry。
+
+```bash
+# 先看会做什么（不 pull / 不 push / 不改文件 / 不提交）
+./.local-workflow/mirror-middleware-images.sh --dry-run
+
+# 真跑：本地 tag → 推到 ACR → 改写 k8s/02、k8s/03 → commit & push main
+./.local-workflow/mirror-middleware-images.sh
+
+# 只处理其中一个
+./.local-workflow/mirror-middleware-images.sh --only postgres
+
+# 重跑：ACR 已有相同 digest 就跳过推送
+./.local-workflow/mirror-middleware-images.sh --skip-existing
+```
+
+| 参数 | 说明 |
+| --- | --- |
+| `--dry-run` | 只打印计划，**不 pull/tag/push、不改文件、不提交** |
+| `-y, --yes` | 跳过所有交互确认 |
+| `--only <list>` | 逗号分隔的镜像名，如 `postgres,redis`（默认：k8s 里所有非 ACR 镜像） |
+| `--skip-existing` | ACR 里该 tag 已有 digest 就跳过推送（此时也不会去 pull） |
+| `--platform <p>` | 目标架构，默认 `linux/amd64`（k3s 节点就是 amd64） |
+| `--no-pull` | 完全离线：只用本地镜像，架构不符直接报错（不自动重拉） |
+| `--force-wrong-arch` | 明知架构不符也推（应急，默认禁止） |
+| `--no-commit` | 只改 `k8s/` 文件，不 commit & push |
+
+日志落在 `.local-workflow/output/mirror-<ts>.log`，每次 push 的完整输出另存 `mirror-push-<name>-<tag>.log`。
+
+**分工**：`deploy.sh` 只管 `k8s/05|06|08`（提交清单里硬编码了这三个），中间件镜像由本脚本单独提交，两边互不覆盖。
+
+**架构是第一号坑**：k3s 节点是 amd64，Mac arm64 上 `docker images` 里的 `postgres:16-alpine` 是 arm64，直接推上去线上 Pod 会 `exec format error`。脚本两道防线：
+
+1. 推送前 `docker image inspect` 查本地架构，不符就 `docker pull --platform linux/amd64` 重拉；拉不到直接中止，**绝不推错架构**
+2. 推送后 `docker buildx imagetools inspect` 复核 ACR 里确实含 `amd64`，不符则报错且**不改 k8s 文件**
+
+> ⚠️ Docker Desktop 用经典镜像存储（非 containerd）时，同一 tag 只能留一个架构变体，重拉可能仍是 arm64 —— 脚本会检测并报错，此时在 amd64 机器上跑或改用 `--platform`。
+
+**ACR 推送 403**：阿里云要求镜像仓库先在控制台创建。报错时脚本会直接告诉你去 ACR 控制台 → 命名空间 `nullpointexception-i` → 新建镜像仓库 → 名称 `postgres` / `redis`（类型选「本地仓库」）。仓库已存在则是账号缺该命名空间的 push 权限。
+
+**不加 `imagePullPolicy`**（保持最小 diff）：节点默认 `IfNotPresent`。首次切换镜像引用没问题（引用变了就是新镜像），但**以后重推同一个 tag 不会自动生效**，需要手动重启：
+
+```bash
+kubectl -n agent-sphere rollout restart deploy/postgres deploy/redis
+```
+
+**只改 `k8s/`**：`agent-sphere/agent-docker-middleware/docker-compose.yml` 也引用了 `postgres` / `redis` 官方镜像，但那是本地开发用的中间件，**保持指向 Docker Hub**，脚本不会碰它。
+
+**幂等**：`k8s/` 里所有 image 都带 registry host 时，脚本报「无事可做」并以 0 退出 —— 可以放心重复跑。
+
 ## 流程与 deploy.yml 的对应
 
 | deploy.yml | deploy.sh |
@@ -101,6 +153,9 @@ docker buildx use as-builder
 
 **ACR 推送 429 / 被限流**
 buildx 串行构建已减少并发；仍失败就错峰重试，或先 `--only backend` 单独发。
+
+**中间件镜像 403 / Pod `ImagePullBackOff`**
+见上面「中间件镜像镜像化」小节 —— 多半是 ACR 命名空间里还没建 `postgres` / `redis` 镜像仓库。
 
 **token 过期**
 `local-config/token.json` 换新 token，或 `GITHUB_TOKEN=ghp_xxx ./.local-workflow/deploy.sh`。token 不会写进日志。

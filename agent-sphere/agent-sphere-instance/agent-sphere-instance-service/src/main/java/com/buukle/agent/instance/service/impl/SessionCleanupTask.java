@@ -5,9 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.buukle.agent.common.config.SystemConfigKeys;
 import com.buukle.agent.common.config.SystemConfigSpi;
 import com.buukle.agent.common.constant.FileStoreBizKeys;
-import com.buukle.agent.common.context.AuthContext;
-import com.buukle.agent.common.context.TenantUtil;
 import com.buukle.agent.common.eventbus.DistributedRuntimeConstants;
+import com.buukle.agent.common.support.AbstractRecordedTask;
 import com.buukle.agent.instance.domain.vo.SessionCleanupRunRowVO;
 import com.buukle.agent.instance.dtvo.enums.RunEnum;
 import com.buukle.agent.instance.dtvo.enums.SessionCleanupRunStatusEnum;
@@ -21,7 +20,6 @@ import com.buukle.agent.util.json.JsonUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,8 +59,7 @@ import java.util.function.Consumer;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
-public class SessionCleanupTask {
+public class SessionCleanupTask extends AbstractRecordedTask<SessionCleanupReportVO, Boolean> {
 
     /** 多副本互斥锁：后端 replicas=2，不加锁两个副本会同时删。 */
     private static final String CLEANUP_LOCK_KEY = "scheduler:session-cleanup";
@@ -100,12 +97,6 @@ public class SessionCleanupTask {
     /** 报告里代表「执行记录表本身」的 key，便于前端一眼看出这一步动了多少行。 */
     private static final String RUN_RECORD_TABLE = "agent_session_cleanup_run";
 
-    /** 定时任务没有请求上下文，记为 system（与 AuditMetaObjectHandler 的兜底一致）。 */
-    private static final String SYSTEM_OPERATOR = "system";
-
-    /** 超过此时长仍是 RUNNING 就标记 stale：进程崩了，别让运维误读成「正在清理」。 */
-    private static final long STALE_THRESHOLD_MINUTES = 30L;
-
     /** table_stats（jsonb 文本）→ Map 的解析类型。 */
     private static final TypeReference<Map<String, Long>> MAP_TYPE_REF = new TypeReference<>() {
     };
@@ -113,7 +104,6 @@ public class SessionCleanupTask {
     private final SessionCleanupMapper sessionCleanupMapper;
     private final SessionCleanupRunMapper sessionCleanupRunMapper;
     private final SystemConfigSpi systemConfigSpi;
-    private final RedissonClient redissonClient;
 
     /**
      * 异步执行用的执行器（infrastructure 的 {@code runtimeAsyncExecutor}，虚拟线程 + 上下文传播）。
@@ -121,8 +111,19 @@ public class SessionCleanupTask {
      * <p>这里按 bean 名注入而不是 {@code @Async}：{@code @Async} 在同类内部自调用不生效，
      * 而本类既要异步提交（HTTP/cron 入口）又要同步执行（单测断言删除顺序），拆两个 Bean 反而绕。
      */
-    @Qualifier("runtimeAsyncExecutor")
     private final Executor cleanupExecutor;
+
+    public SessionCleanupTask(SessionCleanupMapper sessionCleanupMapper,
+                              SessionCleanupRunMapper sessionCleanupRunMapper,
+                              SystemConfigSpi systemConfigSpi,
+                              RedissonClient redissonClient,
+                              @Qualifier("runtimeAsyncExecutor") Executor cleanupExecutor) {
+        super(redissonClient);
+        this.sessionCleanupMapper = sessionCleanupMapper;
+        this.sessionCleanupRunMapper = sessionCleanupRunMapper;
+        this.systemConfigSpi = systemConfigSpi;
+        this.cleanupExecutor = cleanupExecutor;
+    }
 
     @Value("${buukle.agent.session.cleanup-batch-size:200}")
     private int batchSize;
@@ -133,10 +134,10 @@ public class SessionCleanupTask {
     @Value("${buukle.agent.session.cleanup-batch-sleep-ms:200}")
     private int batchSleepMs;
 
-    /** 定时入口：低峰期执行（默认 04:30）。 */
+    /** 定时入口：低峰期执行（默认 04:30）。与手动一样异步提交，只留下一条代码路径。 */
     @Scheduled(cron = "${buukle.agent.session.cleanup-cron:0 30 4 * * ?}")
     public void scheduledCleanup() {
-        runCleanup(false, SessionCleanupTriggerEnum.TRIGGER_SCHEDULED);
+        submitCleanup(false, SessionCleanupTriggerEnum.TRIGGER_SCHEDULED);
     }
 
     /**
@@ -167,9 +168,14 @@ public class SessionCleanupTask {
      */
     public SessionCleanupRunVO submitCleanup(boolean dryRun, String trigger) {
         String operator = currentOperator();
-        Long recordId = sessionCleanupRunMapper.insertRunning(trigger, dryRun,
-                SessionCleanupRunStatusEnum.STATUS_RUNNING, operator);
-        cleanupExecutor.execute(() -> runCleanupInRecord(dryRun, recordId, operator));
+        currentTrigger = trigger;
+        Long recordId;
+        try {
+            recordId = insertRunning(dryRun, operator);
+        } finally {
+            currentTrigger = null;
+        }
+        cleanupExecutor.execute(() -> runWithLock(dryRun, recordId, operator, System.currentTimeMillis()));
         SessionCleanupRunRowVO row = sessionCleanupRunMapper.getRun(recordId, staleBefore());
         return row == null ? null : toRunVO(row);
     }
@@ -188,36 +194,41 @@ public class SessionCleanupTask {
      */
     public SessionCleanupReportVO runCleanup(boolean dryRun, String trigger) {
         String operator = currentOperator();
-        Long recordId = sessionCleanupRunMapper.insertRunning(trigger, dryRun,
-                SessionCleanupRunStatusEnum.STATUS_RUNNING, operator);
-        return runCleanupInRecord(dryRun, recordId, operator);
+        currentTrigger = trigger;
+        Long recordId;
+        try {
+            recordId = insertRunning(dryRun, operator);
+        } finally {
+            currentTrigger = null;
+        }
+        return runWithLock(dryRun, recordId, operator, System.currentTimeMillis());
     }
+
+    /**
+     * insertRunning 需要的 trigger 只能从入口参数拿，而基类签名里没有它。
+     * 这里用字段搭桥是安全的：insertRunning 一定在入口线程内同步调用完（见两处 try/finally），
+     * 真正跨线程的 {@code runWithLock} 不再读这个字段。
+     */
+    private String currentTrigger;
 
     /**
      * 真正的执行体：抢锁 → 清理 → 落终态，异常上抛前先留 FAILED 记录。
      *
      * <p>记录先于锁：抢不到锁也是一种「发生过的事」，需要能查到。
      */
-    private SessionCleanupReportVO runCleanupInRecord(boolean dryRun, Long recordId, String operator) {
-        long startedAtMillis = System.currentTimeMillis();
+    @Override
+    protected SessionCleanupReportVO doRun(Boolean dryRun, Long recordId, String operator, long startedAtMillis) {
         SessionCleanupReportVO report = new SessionCleanupReportVO();
         report.setDryRun(dryRun);
 
-        RLock lock = redissonClient.getLock(CLEANUP_LOCK_KEY);
-        if (!lock.tryLock()) {
-            report.setSkippedByLock(true);
-            report.setSkipReason(SKIP_LOCK_REASON);
-            markSkipped(recordId, report, startedAtMillis, operator);
+        if (!isCleanupEnabled()) {
+            report.setEnabled(false);
+            report.setSkipReason(SKIP_DISABLED_REASON);
+            markSkipped(recordId, SKIP_DISABLED_REASON, System.currentTimeMillis() - startedAtMillis, operator);
             return report;
         }
-        try {
-            if (!isCleanupEnabled()) {
-                report.setEnabled(false);
-                report.setSkipReason(SKIP_DISABLED_REASON);
-                markSkipped(recordId, report, startedAtMillis, operator);
-                return report;
-            }
-            report.setEnabled(true);
+        report.setEnabled(true);
+        {
 
             int retentionDays = resolveRetentionDays();
             int fileRetentionDays = resolveFileRetentionDays();
@@ -247,15 +258,6 @@ public class SessionCleanupTask {
             logSummary(report);
             markSuccess(recordId, report, operator);
             return report;
-        } catch (Exception e) {
-            // 清理异常先留下 FAILED 记录，否则这次尝试等于没发生过。
-            // 异步入口下没人接收异常，所以完整堆栈必须在这里落日志（同步调用也会多一行，符合预期）。
-            sessionCleanupRunMapper.markFailed(recordId, SessionCleanupRunStatusEnum.STATUS_FAILED,
-                    abbreviate(e.getMessage()), System.currentTimeMillis() - startedAtMillis, operator);
-            log.error("Session cleanup failed: recordId={}, dryRun={}", recordId, dryRun, e);
-            throw e;
-        } finally {
-            lock.unlock();
         }
     }
 
@@ -507,41 +509,48 @@ public class SessionCleanupTask {
                 JsonUtils.toJson(report.getTableStats()), operator);
     }
 
-    private LocalDateTime staleBefore() {
-        return LocalDateTime.now().minusMinutes(STALE_THRESHOLD_MINUTES);
+    /** 落 SKIPPED：锁被占用或急停开关关闭 —— 什么都没删也要有痕迹。 */
+    @Override
+    protected void markSkipped(Long recordId, String reason, long elapsedMillis, String operator) {
+        sessionCleanupRunMapper.markSkipped(recordId, SessionCleanupRunStatusEnum.STATUS_SKIPPED,
+                reason, elapsedMillis, operator);
     }
 
-    /** 落 SKIPPED：锁被占用或急停开关关闭 —— 什么都没删也要有痕迹。 */
-    private void markSkipped(Long recordId, SessionCleanupReportVO report,
-                             long startedAtMillis, String operator) {
-        sessionCleanupRunMapper.markSkipped(recordId, SessionCleanupRunStatusEnum.STATUS_SKIPPED,
-                report.getSkipReason(), System.currentTimeMillis() - startedAtMillis, operator);
+    @Override
+    protected void markFailed(Long recordId, Exception e, long elapsedMillis, String operator) {
+        sessionCleanupRunMapper.markFailed(recordId, SessionCleanupRunStatusEnum.STATUS_FAILED,
+                abbreviate(e.getMessage()), elapsedMillis, operator);
     }
 
     /**
-     * 记录里的 operator。优先级与 {@code AuditMetaObjectHandler.currentUser()} 一致
-     * （租户 → 登录用户 → system）：定时任务没有请求上下文，只能落到 system。
-     * 这里内联一份是因为那个 Handler 在 infrastructure，instance 引它会成环。
+     * 锁被别的副本/请求占用：仍要返回一份报告（调用方与接口需要知道「被跳过」而不是拿到 null），
+     * 所以这里覆写基类的默认 null 返回。
      */
-    private String currentOperator() {
-        String tenant = TenantUtil.get();
-        if (tenant != null && !tenant.isBlank()) {
-            return tenant;
-        }
-        String auth = AuthContext.getUsername();
-        if (auth != null && !auth.isBlank()) {
-            return auth;
-        }
-        return SYSTEM_OPERATOR;
+    @Override
+    protected SessionCleanupReportVO onLockBusy(Boolean dryRun, Long recordId,
+                                                String operator, long elapsedMillis) {
+        markSkipped(recordId, SKIP_LOCK_REASON, elapsedMillis, operator);
+        SessionCleanupReportVO report = new SessionCleanupReportVO();
+        report.setDryRun(dryRun);
+        report.setSkippedByLock(true);
+        report.setSkipReason(SKIP_LOCK_REASON);
+        return report;
     }
 
-    /** 异常信息截断，避免超长堆栈描述把记录表撑大。 */
-    private String abbreviate(String message) {
-        final int max = 500;
-        if (message == null) {
-            return null;
-        }
-        return message.length() <= max ? message : message.substring(0, max);
+    @Override
+    protected String lockKey() {
+        return CLEANUP_LOCK_KEY;
+    }
+
+    @Override
+    protected String taskName() {
+        return "Session cleanup";
+    }
+
+    @Override
+    protected Long insertRunning(Boolean dryRun, String operator) {
+        return sessionCleanupRunMapper.insertRunning(currentTrigger, dryRun,
+                SessionCleanupRunStatusEnum.STATUS_RUNNING, operator);
     }
 
     /** 行形态 → API 形态，顺带把 jsonb 文本解析成各表行数 Map。 */

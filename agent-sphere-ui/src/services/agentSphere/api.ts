@@ -56,6 +56,29 @@ export interface SessionCleanupRun {
   remark?: string;
 }
 
+/** Skill 自动同步的一轮执行记录（后端 SkillSyncRunVO）。 */
+export interface SkillSyncRun {
+  id: number;
+  triggerType: 'SCHEDULED' | 'MANUAL';
+  status: 'RUNNING' | 'SUCCESS' | 'FAILED' | 'SKIPPED';
+  /** 本轮扫描到的「开启了自动更新的副本」总数 */
+  scannedCount?: number;
+  handled?: number;
+  updated?: number;
+  skipped?: number;
+  batchSize?: number;
+  /** 未同步的副本及原因：SOURCE_GONE / NOT_PUBLIC / VERSION_NOT_AHEAD / CONCURRENT_UPDATE / ERROR:… */
+  detail?: { copyId: number; originId: number; reason: string }[];
+  skipReason?: string;
+  errorMessage?: string;
+  elapsedMs?: number;
+  startedAt?: string;
+  finishedAt?: string;
+  /** 疑似中断：进程崩了导致记录永远停在 RUNNING */
+  stale?: boolean;
+  createdBy?: string;
+}
+
 export interface PageResult<T> {
   records: T[];
   total: number;
@@ -337,6 +360,13 @@ export const agentApi = {
         method: 'PUT',
         data: { autoUpdate: enabled },
       }),
+    /** 手动触发一轮「从 Skill Hub 同步最新版本」，异步提交、立即返回执行记录。 */
+    syncNow: () => request<SkillSyncRun>(`${BASE}/capability/skill/sync-now`, { method: 'POST' }),
+    /** 轮询单条同步执行记录（含实时统计与跳过明细）。 */
+    syncRun: (id: number) => request<SkillSyncRun>(`${BASE}/capability/skill/sync-runs/${id}`),
+    /** 同步执行记录分页（定时 + 手动）。 */
+    syncRuns: (params?: { triggerType?: string; status?: string; page?: number; size?: number }) =>
+      request<PageResult<SkillSyncRun>>(`${BASE}/capability/skill/sync-runs`, { params }),
   },
 
   cli: {

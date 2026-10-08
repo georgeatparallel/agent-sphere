@@ -26,6 +26,14 @@ public class CapabilitySkill {
     private Integer originVersion;
     /** 已安装副本是否随源版本自动更新；仅副本有意义。 */
     private Boolean autoUpdate;
+    /**
+     * 最后一次与源头对齐的时间（展示快照）：install 时记为安装时间，
+     * syncFromOrigin 成功时刷新。与 originVersion 取值始终一致但互不影响 ——
+     * originVersion 是条件 UPDATE 的乐观锁字段，一旦更新失败它会与界面脱节。
+     */
+    private LocalDateTime syncedAt;
+    /** 最后一次同步到的源头版本号（展示快照，只读）。 */
+    private Integer syncedFromVersion;
     @TableLogic
     private Boolean deleteFlag;
     private Long tenantId;

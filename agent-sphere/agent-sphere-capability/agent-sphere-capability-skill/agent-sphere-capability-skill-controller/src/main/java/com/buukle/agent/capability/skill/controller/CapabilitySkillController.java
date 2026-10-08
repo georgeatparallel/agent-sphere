@@ -3,7 +3,9 @@ package com.buukle.agent.capability.skill.controller;
 import com.buukle.agent.capability.skill.dtvo.dto.BatchUpdateSkillStatusDTO;
 import com.buukle.agent.capability.skill.dtvo.dto.CreateSkillDTO;
 import com.buukle.agent.capability.skill.dtvo.dto.UpdateSkillStatusDTO;
+import com.buukle.agent.capability.skill.dtvo.enums.SkillSyncTriggerEnum;
 import com.buukle.agent.capability.skill.service.CapabilitySkillService;
+import com.buukle.agent.capability.skill.service.impl.SkillSyncRunner;
 import com.buukle.agent.common.annotation.AuditLog;
 import com.buukle.agent.common.context.WithTenant;
 import com.buukle.agent.common.annotation.RequirePermission;
@@ -22,6 +24,7 @@ import java.time.LocalDateTime;
 @WithTenant
 public class CapabilitySkillController extends BaseController {
     private final CapabilitySkillService capabilitySkillService;
+    private final SkillSyncRunner skillSyncRunner;
 
     @AuditLog(action = "CREATE", resourceType = "Capability", resourceId = "#result?.body?.id")
     @RequirePermission("capability:skill:create")
@@ -106,6 +109,42 @@ public class CapabilitySkillController extends BaseController {
     @PostMapping("/{id}/install")
     public ResponseEntity<?> install(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
         return created(capabilitySkillService.installSkill(id, body != null ? body.get("name") : null));
+    }
+
+    /**
+     * 手动触发一轮「从 Skill Hub 同步最新版本」，异步提交、立即返回执行记录。
+     *
+     * <p>不阻塞：一轮会扫所有开启自动更新的副本，前端用返回的 id 轮询
+     * {@code GET /sync-runs/{id}} 看进度与结果。
+     */
+    @AuditLog(action = "SYNC", resourceType = "Capability")
+    @RequirePermission("capability:skill:update")
+    @PostMapping("/sync-now")
+    public ResponseEntity<?> syncNow() {
+        return ok(skillSyncRunner.submitSync(SkillSyncTriggerEnum.TRIGGER_MANUAL));
+    }
+
+    /** 轮询单条同步执行记录（含实时统计与跳过明细）。 */
+    @RequirePermission("capability:skill:read")
+    @GetMapping("/sync-runs/{id}")
+    public ResponseEntity<?> syncRun(@PathVariable Long id) {
+        var run = skillSyncRunner.getRun(id);
+        return run == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(run);
+    }
+
+    /**
+     * 同步执行记录分页。定时与手动两种触发都在这条时间线上。
+     *
+     * <p>这张表也是「自动同步到底跑没跑」的唯一证据：任务 logger 被压到 WARN，
+     * 光看日志无法回答。
+     */
+    @RequirePermission("capability:skill:read")
+    @GetMapping("/sync-runs")
+    public ResponseEntity<?> syncRuns(@RequestParam(required = false) String triggerType,
+                                      @RequestParam(required = false) String status,
+                                      @RequestParam(defaultValue = "1") long page,
+                                      @RequestParam(defaultValue = "10") long size) {
+        return ok(skillSyncRunner.listRuns(triggerType, status, page, size));
     }
 
     @AuditLog(action = "UPDATE_AUTO_UPDATE", resourceType = "Capability", resourceId = "#id")

@@ -4,8 +4,10 @@ import {
   DislikeOutlined,
   EditOutlined,
   EyeOutlined,
+  HistoryOutlined,
   LikeOutlined,
   PlusOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import {
   PageContainer,
@@ -30,7 +32,11 @@ import type dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
 import { Can } from '@/components/Can';
 import { useCan } from '@/hooks/usePermission';
+import { useRecordedTask } from '@/hooks/useRecordedTask';
+import SkillSyncRunPanel from './components/SkillSyncRunPanel';
+import SkillSyncRunsDrawer from './components/SkillSyncRunsDrawer';
 import { agentApi } from '@/services/agentSphere/api';
+import type { SkillSyncRun } from '@/services/agentSphere/api';
 import { getStoredUser } from '@/utils/auth';
 import { formatParamDate, formatTime } from '@/utils/format';
 import { labelWithRule } from '@/utils/labelWithRule';
@@ -61,6 +67,12 @@ interface SkillRecord {
   installCount?: number;
   version?: number;
   autoUpdate?: boolean;
+  /** 已同步到源头版本（后端一直在返回，前端此前没声明，列表也拿它显示） */
+  originVersion?: number;
+  /** 最后一次与源头对齐的时间；安装时即为安装时间 */
+  syncedAt?: string;
+  /** 最后一次同步到的源头版本号 */
+  syncedFromVersion?: number;
   createdAt?: string;
   createdBy?: string;
   updatedBy?: string;
@@ -129,6 +141,14 @@ export default function SkillList() {
   const [tableScrollY, setTableScrollY] = useState(400);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [viewRecord, setViewRecord] = useState<SkillRecord | null>(null);
+  const [syncRunId, setSyncRunId] = useState<number | null>(null);
+  const [syncRunsOpen, setSyncRunsOpen] = useState(false);
+  const [syncSubmitting, setSyncSubmitting] = useState(false);
+  const { record: syncRun } = useRecordedTask<SkillSyncRun>(
+    syncRunId,
+    (id) => agentApi.skill.syncRun(id),
+    () => actionRef.current?.reload(),
+  );
   const [activeTab, setActiveTab] = useState<'mine' | 'hub'>('mine');
   const hubActionRef = useRef<any>(null);
   const canUpdate = useCan('capability:skill:update');
@@ -231,8 +251,55 @@ export default function SkillList() {
       }),
       dataIndex: 'version',
       key: 'version',
-      width: 70,
-      render: (v: any) => v ?? 1,
+      width: 80,
+      // 副本的 version 不随同步自增（只推进 originVersion），所以列名强调是「本地版本」
+      render: (v: any, row: SkillRecord) =>
+        row.originSkillId ? (
+          <span>
+            {v ?? 1}
+            <Tag style={{ marginLeft: 6 }} color="default">
+              {intl.formatMessage({
+                id: 'pages.capabilities.skill.localVersionTag',
+                defaultMessage: '本地',
+              })}
+            </Tag>
+          </span>
+        ) : (
+          v ?? 1
+        ),
+    },
+    {
+      title: intl.formatMessage({
+        id: 'pages.capabilities.skill.syncedVersion',
+        defaultMessage: '已同步源头版本',
+      }),
+      dataIndex: 'syncedFromVersion',
+      key: 'syncedFromVersion',
+      width: 120,
+      // 原生技能没有源头，这个列对它无意义
+      render: (v: any, row: SkillRecord) =>
+        row.originSkillId ? (
+          <span>
+            {intl.formatMessage({
+              id: 'pages.capabilities.skill.syncedVersionValue',
+              defaultMessage: '源头 v{v}',
+              values: { v: v ?? row.originVersion ?? 1 },
+            })}
+          </span>
+        ) : (
+          '-'
+        ),
+    },
+    {
+      title: intl.formatMessage({
+        id: 'pages.capabilities.skill.syncedAt',
+        defaultMessage: '同步时间',
+      }),
+      dataIndex: 'syncedAt',
+      key: 'syncedAt',
+      width: 170,
+      render: (v: any, row: SkillRecord) =>
+        row.originSkillId ? formatTime(v) : '-',
     },
     {
       title: intl.formatMessage({
@@ -423,6 +490,26 @@ export default function SkillList() {
         actionRef.current?.reload();
       },
     });
+  };
+
+  /**
+   * 手动触发一轮「从 Skill Hub 同步最新版本」。
+   *
+   * 异步：接口只负责提交并返回执行记录，真正的扫描在后台跑，
+   * 所以提交完就开面板轮询，不等结果。
+   */
+  const handleSyncNow = async () => {
+    setSyncSubmitting(true);
+    try {
+      const run = await agentApi.skill.syncNow();
+      setSyncRunId(run?.id ?? null);
+    } catch {
+      message.error(
+        intl.formatMessage({ id: 'pages.chat.saveFailed', defaultMessage: '操作失败' }),
+      );
+    } finally {
+      setSyncSubmitting(false);
+    }
   };
 
   const handleInstall = (record: any) => {
@@ -682,6 +769,28 @@ export default function SkillList() {
             onChange: (keys: any) => setSelectedRowKeys(keys),
           }}
           toolBarRender={() => [
+            <Can code="capability:skill:update" key="syncNow">
+              <Button
+                icon={<SyncOutlined />}
+                loading={syncSubmitting}
+                onClick={handleSyncNow}
+              >
+                {intl.formatMessage({
+                  id: 'pages.capabilities.skill.syncNow',
+                  defaultMessage: '检查更新',
+                })}
+              </Button>
+            </Can>,
+            <Button
+              key="syncRuns"
+              icon={<HistoryOutlined />}
+              onClick={() => setSyncRunsOpen(true)}
+            >
+              {intl.formatMessage({
+                id: 'pages.capabilities.skill.syncRuns',
+                defaultMessage: '同步记录',
+              })}
+            </Button>,
             selectedRowKeys.length > 0 && (
               <Button
                 key="batchEnable"
@@ -865,6 +974,15 @@ export default function SkillList() {
           {SAMPLE_DEFINITION}
         </pre>
       </Modal>
+      <SkillSyncRunPanel
+        open={syncRunId != null}
+        run={syncRun}
+        onClose={() => setSyncRunId(null)}
+      />
+      <SkillSyncRunsDrawer
+        open={syncRunsOpen}
+        onClose={() => setSyncRunsOpen(false)}
+      />
       <Modal
         title={viewRecord?.name}
         open={!!viewRecord}
@@ -902,6 +1020,62 @@ export default function SkillList() {
                   })}
                   : {formatTime(viewRecord?.updatedAt)}
                 </span>
+                {/* 安装副本才有源头，原生技能这两项无意义 */}
+                {viewRecord?.originSkillId ? (
+                  <>
+                    <span>
+                      {intl.formatMessage({
+                        id: 'pages.capabilities.skill.syncedVersion',
+                        defaultMessage: '已同步源头版本',
+                      })}
+                      :{' '}
+                      <b style={{ color: 'rgba(0,0,0,0.88)' }}>
+                        {intl.formatMessage({
+                          id: 'pages.capabilities.skill.syncedVersionValue',
+                          defaultMessage: '源头 v{v}',
+                          values: {
+                            v:
+                              viewRecord?.syncedFromVersion ??
+                              viewRecord?.originVersion ??
+                              1,
+                          },
+                        })}
+                      </b>
+                    </span>
+                    <span>
+                      {intl.formatMessage({
+                        id: 'pages.capabilities.skill.syncedAt',
+                        defaultMessage: '同步时间',
+                      })}
+                      :{' '}
+                      <b style={{ color: 'rgba(0,0,0,0.88)' }}>
+                        {formatTime(viewRecord?.syncedAt)}
+                      </b>
+                    </span>
+                    <span>
+                      {intl.formatMessage({
+                        id: 'pages.capabilities.skill.originSkill',
+                        defaultMessage: '源技能',
+                      })}
+                      : {viewRecord.originSkillId}
+                    </span>
+                    {viewRecord?.autoUpdate ? (
+                      <Tag color="blue">
+                        {intl.formatMessage({
+                          id: 'pages.capabilities.skill.autoUpdateOn',
+                          defaultMessage: '自动更新已开启',
+                        })}
+                      </Tag>
+                    ) : (
+                      <Tag>
+                        {intl.formatMessage({
+                          id: 'pages.capabilities.skill.autoUpdateOff',
+                          defaultMessage: '自动更新未开启',
+                        })}
+                      </Tag>
+                    )}
+                  </>
+                ) : null}
               </div>
               {viewRecord?.description ? (
                 <div

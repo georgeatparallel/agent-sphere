@@ -47,6 +47,17 @@
         <appender-ref ref="FILE" />
     </logger>
 
+    <!-- Skill 自动同步要能看到每轮结果（跑了没跑、扫到几条、同步了几条）。
+         父 logger com.buukle.agent.capability=WARN 会把它唯一的 log.info 压掉，
+         而它恰恰是「任务有没有效果」的唯一现场。
+         只放开 SkillSyncRunner 这一个类（不是整个 impl 包 —— 那里还有 CapabilitySkillServiceImpl
+         的业务日志，整体开 INFO 会变成噪音）。父 logger additivity="false"，
+         这里必须自带 appender-ref，否则日志不落盘。 -->
+    <logger name="com.buukle.agent.capability.skill.service.impl.SkillSyncRunner" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE" />
+    </logger>
+
     <logger name="org.apache.catalina.connector.CoyoteAdapter" level="WARN" additivity="false">
         <appender-ref ref="CONSOLE" />
         <appender-ref ref="FILE" />

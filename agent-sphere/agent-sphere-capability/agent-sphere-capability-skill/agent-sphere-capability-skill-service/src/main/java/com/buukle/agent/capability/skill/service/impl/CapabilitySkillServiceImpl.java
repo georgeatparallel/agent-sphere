@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.buukle.agent.capability.skill.domain.CapabilitySkill;
 import com.buukle.agent.capability.skill.dtvo.dto.CreateSkillDTO;
 import com.buukle.agent.capability.skill.dtvo.enums.SkillCapabilityEnum;
+import com.buukle.agent.capability.skill.dtvo.enums.SkillSyncOutcome;
 import com.buukle.agent.capability.skill.dtvo.enums.SkillVisibilityEnum;
 import com.buukle.agent.capability.skill.dtvo.vo.SkillVO;
 import com.buukle.agent.capability.skill.exception.CapabilitySkillErrorCode;
@@ -216,6 +217,9 @@ public class CapabilitySkillServiceImpl extends ServiceImpl<SkillMapper, Capabil
         copy.setVersion(1);
         copy.setOriginVersion(source.getVersion() != null ? source.getVersion() : 1);
         copy.setAutoUpdate(false);
+        // 装完就能看到「来自源头 vN / fork 于此刻」，而不是等第一次同步才有值
+        copy.setSyncedAt(LocalDateTime.now());
+        copy.setSyncedFromVersion(source.getVersion() != null ? source.getVersion() : 1);
         copy.setCreatedBy(operator);
         copy.setUpdatedBy(operator);
         save(copy);
@@ -255,29 +259,40 @@ public class CapabilitySkillServiceImpl extends ServiceImpl<SkillMapper, Capabil
     }
 
     @Override
-    public boolean syncFromOrigin(CapabilitySkill copy) {
+    public SkillSyncOutcome syncWithOutcome(CapabilitySkill copy) {
         CapabilitySkill source = getById(copy.getOriginSkillId());
         if (source == null) {
-            return false;
+            // 源被删：副本永远停在旧内容，且没有任何告警 —— 靠这个返回值才会出现在执行记录里
+            return SkillSyncOutcome.SOURCE_GONE;
         }
         if (!SkillVisibilityEnum.PUBLIC.equals(source.getVisibility())) {
-            return false;
+            return SkillSyncOutcome.NOT_PUBLIC;
         }
         int sourceVersion = source.getVersion() != null ? source.getVersion() : 1;
         int originVersion = copy.getOriginVersion() != null ? copy.getOriginVersion() : 1;
         if (sourceVersion <= originVersion) {
-            return false;
+            return SkillSyncOutcome.VERSION_NOT_AHEAD;
         }
-        // 条件更新：仅当 origin_version 未被其它副本抢先推进时才覆盖，保证多副本幂等
-        return lambdaUpdate()
+        // 条件更新：仅当 origin_version 未被其它副本抢先推进时才覆盖，保证多副本幂等。
+        // 同步成功同时写 synced_at / synced_from_version 两个展示快照 —— 它们与 origin_version
+        // 取值始终一致，但 origin_version 一旦条件更新失败就会与界面显示脱节。
+        boolean updated = lambdaUpdate()
                 .eq(CapabilitySkill::getId, copy.getId())
                 .eq(CapabilitySkill::getOriginVersion, copy.getOriginVersion())
                 .set(CapabilitySkill::getName, source.getName())
                 .set(CapabilitySkill::getDescription, source.getDescription())
                 .set(CapabilitySkill::getDefinition, source.getDefinition())
                 .set(CapabilitySkill::getOriginVersion, sourceVersion)
+                .set(CapabilitySkill::getSyncedAt, LocalDateTime.now())
+                .set(CapabilitySkill::getSyncedFromVersion, sourceVersion)
                 .set(CapabilitySkill::getUpdatedBy, AUTO_UPDATE_OPERATOR)
                 .update();
+        return updated ? SkillSyncOutcome.UPDATED : SkillSyncOutcome.CONCURRENT_UPDATE;
+    }
+
+    @Override
+    public boolean syncFromOrigin(CapabilitySkill copy) {
+        return syncWithOutcome(copy) == SkillSyncOutcome.UPDATED;
     }
 
     /** 同名自动加后缀（hub 安装友好）；上限防极端循环。 */

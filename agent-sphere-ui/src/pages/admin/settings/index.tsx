@@ -2,11 +2,12 @@ import { useIntl } from '@umijs/max';
 import { App, Button, Collapse, Form, Input, Modal, Tag, Upload } from 'antd';
 import { useEffect, useState } from 'react';
 import { useCan } from '@/hooks/usePermission';
+import { useRecordedTask } from '@/hooks/useRecordedTask';
 import { agentApi } from '@/services/agentSphere/api';
+import type { SessionCleanupRun } from '@/services/agentSphere/api';
 import ResourceTemplateEditor from './resourceTemplate/ResourceTemplateEditor';
 import SessionCleanupRunPanel from './sessionCleanup';
 import SessionCleanupRunsDrawer from './sessionCleanupRuns';
-import { useSessionCleanupRun } from './useSessionCleanupRun';
 import { useStyles } from './style';
 
 interface ConfigItem {
@@ -42,7 +43,10 @@ export default function AdminSettings() {
   const [runsOpen, setRunsOpen] = useState(false);
   const [cleanupRunId, setCleanupRunId] = useState<number | null>(null);
   const [cleanupSubmitting, setCleanupSubmitting] = useState(false);
-  const { run: cleanupRun } = useSessionCleanupRun(cleanupRunId);
+  const { record: cleanupRun } = useRecordedTask<SessionCleanupRun>(
+    cleanupRunId,
+    (id) => agentApi.admin.getSessionCleanupRun(id),
+  );
 
   const canUpdate = useCan('admin:settings:update');
   const canRegenerate = useCan('admin:settings:regenerate-aes');

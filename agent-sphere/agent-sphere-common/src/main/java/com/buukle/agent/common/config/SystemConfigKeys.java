@@ -24,6 +24,10 @@ public final class SystemConfigKeys {
     public static final String SESSION_FILE_RETENTION_DAYS = "session.file-retention-days";
     /** 清理任务自身执行记录（agent_session_cleanup_run）的保留天数：记录表本身也要被清理，否则无限增长 */
     public static final String SESSION_CLEANUP_LOG_RETENTION_DAYS = "session.cleanup-log-retention-days";
+    /** Skill Hub 自动同步急停开关（"true"/"false"）：关掉后只剩手动触发 */
+    public static final String SKILL_AUTO_UPDATE_ENABLED = "skill.auto-update-enabled";
+    /** Skill 自动同步执行记录（capability_skill_sync_run）保留天数：每轮扫描一行，不清理会一直涨 */
+    public static final String SKILL_SYNC_LOG_RETENTION_DAYS = "skill.sync-log-retention-days";
 
     /** 允许不经鉴权公开读取的配置键（仅安全/非敏感项） */
     public static final java.util.Set<String> PUBLIC_KEYS = java.util.Set.of(PLUGIN_DOWNLOAD_URL, PLUGIN_STORE_URL);
