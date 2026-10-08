@@ -54,3 +54,61 @@ JSON **string** in the API payload; in the UI's header configuration field, ente
 `{"User-Agent":"agent-sphere/1.0.0"}`. This identifies AgentSphere's outgoing
 MCP requests without adding an Authorization header to Parallel. Your
 AgentSphere login token authenticates requests to your backend only.
+
+## Use from an agent session
+
+Creating an MCP entry alone does not add it to an agent. Choose an existing
+instance with a configured model route that supports tool calls, then bind the
+capability to that instance. Your account needs `instance:capability:bind` in
+addition to the MCP permissions. Set `INSTANCE_ID` to your own instance's id:
+
+```bash
+export INSTANCE_ID='<your existing instance id>'
+jq -n --argjson iid "$INSTANCE_ID" --argjson mid "$MCP_ID" \
+  '{instanceId:$iid, capabilityType:"mcp", capabilityId:$mid, status:"ENABLED"}' \
+  | curl --fail-with-body -sS "$AGENT_SPHERE_URL/api/v1/instance/instance-capabilities" \
+      -H "Authorization: Bearer $AGENT_SPHERE_TOKEN" \
+      -H 'Content-Type: application/json' --data-binary @- | jq
+```
+
+Alternatively, add Parallel under the instance's capability settings. Start a
+new chat for that instance and ask it to search for the official MCP Streamable
+HTTP documentation, fetch a relevant source returned by search, and explain the
+transport with that source URL. The runtime discovers the MCP schemas and gives
+them to the selected model. Internally, model tool names are `mcp_<id>_<index>`;
+`ContextPreparer` maps them to `web_search` and `web_fetch`, and `ToolExecutor`
+calls the saved server configuration. `SessionRunner` passes the MCP result into
+the next model request. Tool selection and answer quality depend on your model;
+inspect the chat's tool results to confirm both calls. A disabled binding does
+not expose these MCP tools. Existing model selections and permissions still apply.
+
+## Regression and optional live validation
+
+With Java 21 and Maven, run from `agent-sphere/`:
+
+```bash
+mvn install -DskipTests
+mvn test
+mvn -pl agent-sphere-bootstrap test -Dtest=ParallelSearchAgentLoopTest
+# Explicit network opt-in: real anonymous Parallel search and fetch.
+mvn -pl agent-sphere-bootstrap test -Dtest=ParallelSearchAgentLoopTest -Dparallel.live=true
+```
+
+`ParallelSearchAgentLoopTest` loads `mcp.json` through the real MCP service,
+creates an instance binding through the real binding service, and uses
+`ContextPreparer`, `SessionRunner`, `KernelLlmService` and `ToolExecutor` without
+replacing their dispatch logic. Mapper persistence, Redis state and the model
+provider are fixtures. The controlled model chooses a fetch URL from the preceding
+search result and builds its final reply from the fetch result; assertions check
+tool-call IDs and the assistant/tool message sequence at the next model boundary.
+The local HTTP fixture observes the endpoint, User-Agent and absence of credentials
+on discovery/search/fetch, and a disabled-binding test checks no MCP requests occur.
+The opt-in test uses the shipped anonymous endpoint and the same agent loop.
+It validates runtime wiring, not an external model's reasoning or answer quality,
+and does not exercise HTTP authentication or durable database/Redis persistence.
+No Parallel key is loaded from the environment or saved configuration. Live tests
+can fail on network errors or anonymous rate limits; these failures are not a pass.
+
+The backend's existing source-scanning tests exclude paths containing `target`;
+use a checkout whose absolute directory path does not contain that word for the
+full suite. The repository has no PR test CI, so run these checks locally.
