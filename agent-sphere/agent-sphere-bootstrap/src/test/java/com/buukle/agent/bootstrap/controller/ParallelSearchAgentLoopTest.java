@@ -141,6 +141,7 @@ class ParallelSearchAgentLoopTest {
     @SuppressWarnings("unchecked")
     private void exercise(String endpoint, boolean enabled) throws Exception {
         AgentRuntimeProperties properties = new AgentRuntimeProperties();
+        properties.getRunner().setLlmTurnMaxRetries(0);
         McpTransportFactory factory = new McpTransportFactory(properties);
         try {
             // Mock only mapper persistence, keeping native create, query, conversion and binding.
@@ -249,6 +250,9 @@ class ParallelSearchAgentLoopTest {
             AtomicInteger turns = new AtomicInteger();
             AtomicReference<String> selectedUrl = new AtomicReference<>();
             AtomicReference<String> finalAnswer = new AtomicReference<>();
+            AtomicReference<Throwable> modelFailure = new AtomicReference<>();
+            AtomicInteger searchChars = new AtomicInteger();
+            AtomicInteger fetchChars = new AtomicInteger();
             String parallelSession = UUID.randomUUID().toString();
             ModelProviderSpi model = mock(ModelProviderSpi.class);
             doAnswer(inv -> {
@@ -266,13 +270,20 @@ class ParallelSearchAgentLoopTest {
                     } else if (turn == 1) {
                         String text = toolResult(request, SEARCH_CALL, search.getLlmToolName());
                         var match = SOURCE_URL.matcher(text);
-                        assertTrue(match.find(), "Search must return an official source URL: " + text);
-                        selectedUrl.set(match.group());
+                        searchChars.set(text.length());
+                        while (match.find()) {
+                            if (match.group().contains("/transports")) {
+                                selectedUrl.set(match.group());
+                                break;
+                            }
+                        }
+                        assertNotNull(selectedUrl.get(), "Search must return an official transport source URL: " + text);
                         ObjectNode args = JSON.createObjectNode().put("objective", OBJECTIVE).put("session_id", parallelSession);
                         args.putArray("urls").add(selectedUrl.get());
                         events.accept(new LLMEvent.ToolCall(FETCH_CALL, fetch.getLlmToolName(), args.toString()));
                     } else if (turn == 2) {
-                        String text = toolResult(request, FETCH_CALL, fetch.getLlmToolName());
+                        String text = pageText(toolResult(request, FETCH_CALL, fetch.getLlmToolName()));
+                        fetchChars.set(text.length());
                         assertTrue(text.contains("Streamable"), text);
                         if (!ENDPOINT.equals(endpoint)) assertTrue(text.contains(FIXTURE_TEXT));
                         String answer = selectedUrl.get() + "\n" + text.substring(0, Math.min(240, text.length()));
@@ -283,6 +294,7 @@ class ParallelSearchAgentLoopTest {
                     }
                 } catch (Throwable failure) {
                     // Propagate assertion failures across the real KernelLlmService virtual thread.
+                    modelFailure.set(failure);
                     events.accept(new LLMEvent.Error(failure.toString()));
                 } finally {
                     done.run();
@@ -297,6 +309,7 @@ class ParallelSearchAgentLoopTest {
                     new RunPromptBuilder(), executor, mock(TitleService.class), mock(AgentToolCallRecordSpi.class),
                     redis, mock(ChatAttachmentResolver.class), new LlmRequestConfigurer(mock(SystemConfigSpi.class)));
             runner.run(SESSION_ID);
+            if (modelFailure.get() != null) throw new AssertionError("Controlled model validation failed", modelFailure.get());
             assertEquals("COMPLETED", run.getStatus(), "Runner must finish all result-dependent turns");
             assertEquals(3, turns.get());
             assertNotNull(finalAnswer.get());
@@ -305,6 +318,8 @@ class ParallelSearchAgentLoopTest {
             verify(credential, times(2)).get();
             verify(input).clear(SESSION_ID);
             verify(cache).remove(SESSION_ID);
+            System.out.printf("Parallel MCP agent loop completed: source=%s; search characters=%d; fetched body characters=%d; model turns=%d%n",
+                    selectedUrl.get(), searchChars.get(), fetchChars.get(), turns.get());
         } finally {
             factory.evictClient(MCP_ID);
         }
@@ -330,6 +345,19 @@ class ParallelSearchAgentLoopTest {
         String text = String.join("\n", result.path("content").findValuesAsText("text"));
         assertFalse(text.isBlank());
         return text;
+    }
+
+    private static String pageText(String text) throws Exception {
+        if (!text.stripLeading().startsWith("{")) return text; // Local fixture's opaque MCP text.
+        JsonNode extracted = JSON.readTree(text);
+        assertTrue(extracted.path("errors").isEmpty(), text);
+        StringBuilder body = new StringBuilder();
+        for (JsonNode page : extracted.path("results")) {
+            for (JsonNode excerpt : page.path("excerpts")) body.append(excerpt.asText()).append("\n");
+            if (page.path("full_content").isTextual()) body.append(page.path("full_content").asText());
+        }
+        assertFalse(body.isEmpty(), "Fetch must contain extracted page text");
+        return body.toString();
     }
 
     private static void initTable(Class<?> entity) {
